@@ -1,0 +1,13 @@
+{
+  "XApiKey": "testApiKey",
+  "Jwt": {
+    "Issuer": "test",
+    "Audience": "test",
+    "Key": "k9icVo1AjEuGyMfcvLVLX1vmgRadDuTFL4fxW5OkAB55WGgQ3E",
+    "ExpireMinutes": "1", 
+    "RefreshTokenExpireMinutes": "2"
+  },
+  "ConnectionStrings": {
+    "DataBaseConnection": "Server=localhost,1433\\mssqllocaldb;Database={0};User Id=sa;Password=Sql_S3rv3r;Encrypt=false"
+  }
+}
