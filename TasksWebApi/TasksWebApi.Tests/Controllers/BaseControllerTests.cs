@@ -2,6 +2,7 @@ using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
@@ -9,9 +10,11 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
+using Moq;
 using TasksWebApi.DataAccess;
 using TasksWebApi.DataAccess.Entities;
 using TasksWebApi.Models;
+using TasksWebApi.Services;
 
 namespace TasksWebApi.Tests.Controllers;
 
@@ -21,50 +24,11 @@ public class BaseControllerTests
     protected HttpClient _client;
     protected List<TaskListEntity> _dbTaskLists;
     protected List<TaskEntity> _dbTasks;
-    protected int _refreshTokenExpireMinutes;
     
     protected async Task<WebApplicationFactory<Program>> BuildWebApplicationFactoryAsync(string dbContextName)
     {
         _factory = new WebApplicationFactory<Program>();
-        _factory = _factory.WithWebHostBuilder(builder =>
-        {
-            builder.ConfigureTestServices(services =>
-            {
-                var directory = Directory.GetCurrentDirectory();
-                var configuration = new ConfigurationBuilder()
-                    .SetBasePath(directory)
-                    .AddJsonFile(
-                        path: "testappsettings.json",
-                        optional: false,
-                        reloadOnChange: true)
-                    .Build();
-                services.AddSingleton<IConfiguration>(configuration);
-                _refreshTokenExpireMinutes = int.Parse(configuration["Jwt:RefreshTokenExpireMinutes"]!);
-                services.PostConfigure<JwtBearerOptions>(JwtBearerDefaults.AuthenticationScheme, options =>
-                {
-                    options.TokenValidationParameters = new TokenValidationParameters()
-                    {
-                        ValidIssuer = configuration["Jwt:Issuer"],
-                        ValidAudience = configuration["Jwt:Audience"],
-                        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(configuration["Jwt:Key"]!)),
-                        ValidateIssuer = true,
-                        ValidateAudience = true,
-                        ValidateLifetime = true,
-                        ValidateIssuerSigningKey = true,
-                        ClockSkew = TimeSpan.FromMinutes(int.Parse(configuration["Jwt:ExpireMinutes"]!)),
-                    };
-                });
-                
-                ServiceDescriptor descriptorDbContext = services.SingleOrDefault(d => d.ServiceType == typeof(DbContextOptions<TasksDbContext>));
-                if (descriptorDbContext != null)
-                    services.Remove(descriptorDbContext);
-
-                string settingsConnectionString = configuration.GetConnectionString("DataBaseConnection");
-                string connectionString = string.Format(settingsConnectionString, dbContextName);
-                services.AddDbContext<TasksDbContext>(options => options
-                    .UseSqlServer(connectionString));
-            });
-        });
+        _factory = _factory.WithWebHostBuilder(builder => builder.UseEnvironment("Testing"));
 
         await SeedDatabaseContextAsync(_factory);
         return _factory;
@@ -133,7 +97,13 @@ public class BaseControllerTests
         using var scope = webApplicationFactory.Services.CreateScope();
         var roleManager = scope.ServiceProvider.GetService<RoleManager<IdentityRole>>();
         var userManager = scope.ServiceProvider.GetService<UserManager<UserEntity>>();
-        var context = scope.ServiceProvider.GetRequiredService<TasksDbContext>();
+        var dbContextOptions = scope.ServiceProvider.GetRequiredService<DbContextOptions<TasksDbContext>>();
+        var httpContextServiceMock = new Mock<IHttpContextService>();
+        
+        httpContextServiceMock
+            .Setup(x => x.GetContextUser())
+            .Returns(new UserResponse(Guid.NewGuid().ToString(), "user", "user@dicres.com", new List<string>()));
+        var context = new TasksDbContext(httpContextServiceMock.Object, dbContextOptions);
 
         await InitializeDbForTestsAsync(context, roleManager, userManager);
     }

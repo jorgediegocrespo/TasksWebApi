@@ -11,6 +11,6 @@ public class TestController : BaseController
     [HttpGet]
     public IActionResult Test(CancellationToken cancellationToken = default)
     {
-        return Ok("v1.0");
+        return Ok("20231127");
     }
 }

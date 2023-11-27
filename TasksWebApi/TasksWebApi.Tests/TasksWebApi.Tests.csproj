@@ -29,7 +29,8 @@
     </ItemGroup>
 
     <ItemGroup>
-      <EmbeddedResource Include="testappsettings.json">
+      <None Remove="DataAccess\Repositories\repositorySettings.json" />
+      <EmbeddedResource Include="DataAccess\Repositories\repositorySettings.json">
         <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       </EmbeddedResource>
     </ItemGroup>

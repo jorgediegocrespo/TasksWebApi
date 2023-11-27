@@ -1,0 +1,3 @@
+{
+  "RepositoryTestConnectionString": "Server=localhost,1433\\mssqllocaldb;Database={0};User Id=sa;Password=Sql_S3rv3r;Encrypt=false"
+}

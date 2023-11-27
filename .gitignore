@@ -396,3 +396,18 @@ FodyWeavers.xsd
 
 # JetBrains Rider
 *.sln.iml
+TasksWebApi/.idea/.idea.TasksWebApi/.idea/efCoreCommonOptions.xml
+TasksWebApi/.idea/.idea.TasksWebApi/.idea/efCoreDialogsState.xml
+TasksWebApi/.idea/.idea.TasksWebApi/.idea/encodings.xml
+TasksWebApi/.idea/.idea.TasksWebApi/.idea/indexLayout.xml
+TasksWebApi/.idea/.idea.TasksWebApi/.idea/vcs.xml
+TasksWebApi/.idea/.DS_Store
+TasksWebApi/TasksWebApi/Controllers/.DS_Store
+TasksWebApi/TasksWebApi/DataAccess/.DS_Store
+TasksWebApi/TasksWebApi/Services/.DS_Store
+TasksWebApi/TasksWebApi/.DS_Store
+TasksWebApi/TasksWebApi.Controllers.Tests/.DS_Store
+TasksWebApi/TasksWebApi.Tests/.DS_Store
+TasksWebApi/.DS_Store
+.DS_Store
+TasksWebApi/.idea
