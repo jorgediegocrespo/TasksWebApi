@@ -9,7 +9,7 @@ Some of the implementations carried out are:
 - Hosted services
 - Versioning by url and header
 - API Key management with service filter attribute
-- EF aoft delete
+- EF soft delete
 - EF concurrency control
 - Tests with MSTest
 
