@@ -1,15 +1,11 @@
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc.Testing;
-using Microsoft.AspNetCore.TestHost;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.IdentityModel.Tokens;
 using Moq;
 using TasksWebApi.DataAccess;
 using TasksWebApi.DataAccess.Entities;
@@ -59,10 +55,10 @@ public class BaseControllerTests
     protected async Task<TokenResponse> UserSignIn()
     {
         var signInInfo = new SignInRequest("user", "!_-ABCabc123");
-        StringContent content = new StringContent(JsonSerializer.Serialize(signInInfo), Encoding.UTF8, "application/json");
-        HttpResponseMessage response = await _client.PostAsync("/api/v1.0/user/signin", content);
-        string serializedTokenInfo = await response.Content.ReadAsStringAsync();
-        TokenResponse tokenInfo = JsonSerializer.Deserialize<TokenResponse>(serializedTokenInfo, new JsonSerializerOptions() { PropertyNameCaseInsensitive = true });
+        var content = new StringContent(JsonSerializer.Serialize(signInInfo), Encoding.UTF8, "application/json");
+        var response = await _client.PostAsync("/api/v1.0/user/signin", content);
+        var serializedTokenInfo = await response.Content.ReadAsStringAsync();
+        var tokenInfo = JsonSerializer.Deserialize<TokenResponse>(serializedTokenInfo, new JsonSerializerOptions() { PropertyNameCaseInsensitive = true });
         
         _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", tokenInfo.Token);
         return tokenInfo;
@@ -71,10 +67,10 @@ public class BaseControllerTests
     protected async Task<TokenResponse> AdminSignIn()
     {
         var signInInfo = new SignInRequest("admin", "123abcABC-_!");
-        StringContent content = new StringContent(JsonSerializer.Serialize(signInInfo), Encoding.UTF8, "application/json");
-        HttpResponseMessage response = await _client.PostAsync("/api/v1.0/user/signin", content);
-        string serializedTokenInfo = await response.Content.ReadAsStringAsync();
-        TokenResponse tokenInfo = JsonSerializer.Deserialize<TokenResponse>(serializedTokenInfo, new JsonSerializerOptions() { PropertyNameCaseInsensitive = true });
+        var content = new StringContent(JsonSerializer.Serialize(signInInfo), Encoding.UTF8, "application/json");
+        var response = await _client.PostAsync("/api/v1.0/user/signin", content);
+        var serializedTokenInfo = await response.Content.ReadAsStringAsync();
+        var tokenInfo = JsonSerializer.Deserialize<TokenResponse>(serializedTokenInfo, new JsonSerializerOptions() { PropertyNameCaseInsensitive = true });
         
         _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", tokenInfo.Token);
         return tokenInfo;
@@ -83,10 +79,10 @@ public class BaseControllerTests
     protected async Task<TokenResponse> EmptySignIn()
     {
         var signInInfo = new SignInRequest("diego", "!_-ABCabc123");
-        StringContent content = new StringContent(JsonSerializer.Serialize(signInInfo), Encoding.UTF8, "application/json");
-        HttpResponseMessage response = await _client.PostAsync("/api/v1.0/user/signin", content);
-        string serializedTokenInfo = await response.Content.ReadAsStringAsync();
-        TokenResponse tokenInfo = JsonSerializer.Deserialize<TokenResponse>(serializedTokenInfo, new JsonSerializerOptions() { PropertyNameCaseInsensitive = true });
+        var content = new StringContent(JsonSerializer.Serialize(signInInfo), Encoding.UTF8, "application/json");
+        var response = await _client.PostAsync("/api/v1.0/user/signin", content);
+        var serializedTokenInfo = await response.Content.ReadAsStringAsync();
+        var tokenInfo = JsonSerializer.Deserialize<TokenResponse>(serializedTokenInfo, new JsonSerializerOptions() { PropertyNameCaseInsensitive = true });
         
         _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", tokenInfo.Token);
         return tokenInfo;
@@ -116,20 +112,20 @@ public class BaseControllerTests
 
     private async Task AddInfoAsync(TasksDbContext context, RoleManager<IdentityRole> roleManager, UserManager<UserEntity> userManager)
     {
-        UserEntity user1 = new UserEntity
+        var user1 = new UserEntity
         {
             UserName = "diego",
             Email = "diego@diego.dicres"
         };
         await userManager.CreateAsync(user1, "!_-ABCabc123");
         
-        UserEntity user2 = new UserEntity
+        var user2 = new UserEntity
         {
             UserName = "user",
             Email = "user@dicres.com"
         };
         await userManager.CreateAsync(user2, "!_-ABCabc123");
-        string userId = await context.Users.Where(x => x.UserName == "user").Select(x => x.Id).FirstAsync();
+        var userId = await context.Users.Where(x => x.UserName == "user").Select(x => x.Id).FirstAsync();
         
         await context.TaskLists.AddRangeAsync(new List<TaskListEntity>
         {

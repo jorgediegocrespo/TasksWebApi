@@ -5,6 +5,7 @@ using System.Text;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.IdentityModel.Tokens;
 using TasksWebApi.Constants;
+using TasksWebApi.DataAccess;
 using TasksWebApi.DataAccess.Entities;
 using TasksWebApi.DataAccess.Repositories;
 using TasksWebApi.Exceptions;
@@ -13,59 +14,76 @@ using TasksWebApi.Models;
 
 namespace TasksWebApi.Services;
 
-public class UserService : IUserService
+public class UserService(
+    UserManager<UserEntity> userManager,
+    SignInManager<UserEntity> signInManager,
+    IConfiguration configuration,
+    IHttpContextService httpContextService,
+    ITaskListRepository taskListRepository,
+    IUnitOfWork unitOfWork,
+    ILogger<UserService> loggerManager)
+    : IUserService
 {
-    private readonly UserManager<UserEntity> _userManager;
-    private readonly SignInManager<UserEntity> _signInManager;
-    private readonly IConfiguration _configuration;
-    private readonly IHttpContextService _httpContextService;
-    private readonly ITaskListRepository _taskListRepository;
-
-    public UserService(UserManager<UserEntity> userManager, SignInManager<UserEntity> signInManager, IConfiguration configuration, IHttpContextService httpContextService, ITaskListRepository taskListRepository)
-    {
-        _userManager = userManager;
-        _signInManager = signInManager;
-        _configuration = configuration;
-        _httpContextService = httpContextService;
-        _taskListRepository = taskListRepository;
-    }
-    
     public async Task<TokenResponse> SignUpAsync(SignUpRequest userInfo, CancellationToken cancellationToken = default)
     {
-        UserEntity user = userInfo.ToIdentityUser();
-        var result = await _userManager.CreateAsync(user, userInfo.Password);
-        if (!result.Succeeded)
-            return null;
-
-        return await GetTokenInfoAsync(user.UserName);
+        var user = userInfo.ToIdentityUser();
+        var result = await userManager.CreateAsync(user, userInfo.Password);
+        if (result.Succeeded) 
+            return await GetTokenInfoAsync(user.UserName);
+        
+        loggerManager.LogInformation("User creation failed");
+        return null;
     }
 
     public async Task<TokenResponse> SignInAsync(SignInRequest userInfo, CancellationToken cancellationToken = default)
     {
-        SignInResult result = await _signInManager.PasswordSignInAsync(userInfo.UserName, userInfo.Password, false, false);
-        return result.Succeeded ? await GetTokenInfoAsync(userInfo.UserName) : null;
+        var result = await signInManager.PasswordSignInAsync(userInfo.UserName, userInfo.Password, false, false);
+        if (result.Succeeded)
+            return await GetTokenInfoAsync(userInfo.UserName);
+        
+        loggerManager.LogInformation("User login failed");
+        return null;
     }
 
     public async Task DeleteAsync(UserDeleteRequest deleteRequest, CancellationToken cancellationToken = default)
     {
-        UserEntity user = await _userManager.FindByNameAsync(deleteRequest.UserName);
-        await ValidateEntityToDeleteAsync(user, cancellationToken);
+        var user = await userManager.FindByNameAsync(deleteRequest.UserName);
+        await ValidateEntityToDeleteAsync(user, false, cancellationToken);
+        await userManager.DeleteAsync(user!);
+    }
+    
+    public async Task DeleteWithDataAsync(UserDeleteRequest deleteRequest, CancellationToken cancellationToken = default)
+    {
+        var user = await userManager.FindByNameAsync(deleteRequest.UserName);
+        await ValidateEntityToDeleteAsync(user, true, cancellationToken);
         
-        await _userManager.DeleteAsync(user!);
+        await unitOfWork.SaveChangesInTransactionAsync(
+            async () =>
+            {
+                await taskListRepository.DeleteAsync(user!.Id, true, cancellationToken);
+                await unitOfWork.SaveChangesWithoutSoftDeleteAsync(cancellationToken);
+                await userManager.DeleteAsync(user!);
+            }, cancellationToken);
     }
 
     public async Task<TokenResponse> RefreshTokenAsync(RefreshTokenRequest refreshTokenRequest, CancellationToken cancellationToken = default)
     {
         var userName = GetUserNameFromToken(refreshTokenRequest);
-        if (userName == null) 
+        if (userName == null)
+        {
+            loggerManager.LogInformation("Token is not valid");
             return null;
+        }
 
-        var user = await _userManager.FindByNameAsync(userName);
+        var user = await userManager.FindByNameAsync(userName);
         if (user == null ||
             user.RefreshToken != refreshTokenRequest.RefreshToken ||
             user.RefreshTokenExpiration <= DateTime.UtcNow)
+        {
+            loggerManager.LogInformation("Refresh token is not valid");
             return null;
-        
+        }
+
         return await GetTokenInfoAsync(user.UserName);
     }
 
@@ -76,14 +94,8 @@ public class UserService : IUserService
             // Extract the user name from the token
             var handler = new JwtSecurityTokenHandler();
             var jwtToken = handler.ReadJwtToken(refreshTokenRequest.Token);
-            if (jwtToken == null)
-                return null;
-
-            var userNameClaim = jwtToken.Claims.FirstOrDefault(claim => claim.Type == ClaimTypes.Name);
-            if (userNameClaim == null)
-                return null;
-        
-            return userNameClaim.Value;
+            var userNameClaim = jwtToken?.Claims.FirstOrDefault(claim => claim.Type == ClaimTypes.Name);
+            return userNameClaim?.Value;
         }
         catch (Exception)
         {
@@ -92,32 +104,44 @@ public class UserService : IUserService
         }
     }
 
-    private async Task ValidateEntityToDeleteAsync(UserEntity entity, CancellationToken cancellationToken = default)
+    private async Task ValidateEntityToDeleteAsync(UserEntity entity, bool willRemoveData, CancellationToken cancellationToken = default)
     {
         if (entity == null)
-            throw new NotValidOperationException(ErrorCodes.ITEM_NOT_EXISTS, $"The user to remove does not exists");
+        {
+            loggerManager.LogInformation("The user to remove does not exists");
+            throw new NotValidOperationException(ErrorCodes.ITEM_NOT_EXISTS, "The user to remove does not exists");
+        }
 
-        var contextUser = _httpContextService.GetContextUser();
+        var contextUser = httpContextService.GetContextUser();
         
         //Only superadmin can delete other users
         if (!entity.Id.Equals(contextUser.Id, StringComparison.InvariantCultureIgnoreCase) &&
             contextUser.Roles?.Contains(Roles.SUPERADMIN) != true)
+        {
+            loggerManager.LogInformation("Only superadmin can delete other users");
             throw new ForbidenActionException();
-        
+        }
+
         //A superadmin can not be deleted
-        if (await _userManager.IsInRoleAsync(entity, Roles.SUPERADMIN))
+        if (await userManager.IsInRoleAsync(entity, Roles.SUPERADMIN))
+        {
+            loggerManager.LogInformation("A superadmin can not be deleted");
             throw new ForbidenActionException();
-        
+        }
+
         //User can not be deleted if it has any list
         //As the app use soft delete, if the user has any list deleted (IsDeleted = true) it neither can be deleted
-        int userTaskListCount = await _taskListRepository.GetTotalRecordsAsync(entity.Id, cancellationToken, true);
-        if (userTaskListCount > 0)
-            throw new NotValidOperationException(ErrorCodes.USER_WITH_LISTS, $"The user to remove owns any task list");
+        var removedUserTaskListCount = await taskListRepository.GetTotalRecordsAsync(entity.Id, cancellationToken, !willRemoveData);
+        if (removedUserTaskListCount > 0)
+        {
+            loggerManager.LogInformation("The user to remove owns some task list");
+            throw new NotValidOperationException(ErrorCodes.USER_WITH_LISTS, "The user to remove owns some task list");
+        }
     }
 
     private async Task<TokenResponse> GetTokenInfoAsync(string userName)
     {
-        int expirationMinutes = int.Parse(_configuration["Jwt:ExpireMinutes"]!);
+        var expirationMinutes = int.Parse(configuration["Jwt:ExpireMinutes"]!);
         var expiration = DateTime.UtcNow.AddMinutes(expirationMinutes);
         
         var token = await GenerateTokenAsync(userName, expiration);
@@ -129,15 +153,15 @@ public class UserService : IUserService
     
     private async Task<string> GenerateTokenAsync(string userName, DateTime expiration)
     {
-        var issuer = _configuration["Jwt:Issuer"];
-        var audience = _configuration["Jwt:Audience"];
-        var key = _configuration["Jwt:Key"];
+        var issuer = configuration["Jwt:Issuer"];
+        var audience = configuration["Jwt:Audience"];
+        var key = configuration["Jwt:Key"];
         ;
-        SymmetricSecurityKey securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(key!));
-        SigningCredentials credentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);
-        IList<Claim> claims = await GetUserClaimsAsync(userName);
+        var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(key!));
+        var credentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);
+        var claims = await GetUserClaimsAsync(userName);
         
-        JwtSecurityToken securityToken = new JwtSecurityToken(
+        var securityToken = new JwtSecurityToken(
             issuer: issuer, 
             audience: audience, 
             claims: claims, 
@@ -149,29 +173,30 @@ public class UserService : IUserService
     
     private async Task<UserEntity> GenerateRefreshTokenAsync(string userName, CancellationToken cancellationToken = default)
     {
-        var refreshTokenExpireMinutes = int.Parse(_configuration["Jwt:RefreshTokenExpireMinutes"]!);
+        var refreshTokenExpireMinutes = int.Parse(configuration["Jwt:RefreshTokenExpireMinutes"]!);
         
         var randomNumber = new byte[32];
         using var rng = RandomNumberGenerator.Create();
         rng.GetBytes(randomNumber);
         var refreshToken = Convert.ToBase64String(randomNumber);
         
-        UserEntity user = await _userManager.FindByNameAsync(userName);
+        var user = await userManager.FindByNameAsync(userName);
         user.RefreshToken = refreshToken;
         user.RefreshTokenExpiration = DateTime.UtcNow.AddMinutes(refreshTokenExpireMinutes);
         
-        var result = await _userManager.UpdateAsync(user);
-        if (!result.Succeeded)
-            return null;
-
-        return user;
+        var result = await userManager.UpdateAsync(user);
+        if (result.Succeeded) 
+            return user;
+        
+        loggerManager.LogInformation("User update failed");
+        return null;
     }
 
     private async Task<IList<Claim>> GetUserClaimsAsync(string userName)
     {
-        UserEntity user = await _userManager.FindByNameAsync(userName);
-        IList<string> roles = await _userManager.GetRolesAsync(user!);
-        IList<Claim> claims = await _userManager.GetClaimsAsync(user);
+        var user = await userManager.FindByNameAsync(userName);
+        var roles = await userManager.GetRolesAsync(user!);
+        var claims = await userManager.GetClaimsAsync(user);
 
         claims.Add(new Claim(ClaimTypes.NameIdentifier, user.Id));
         claims.Add(new Claim(ClaimTypes.Name, user.UserName));

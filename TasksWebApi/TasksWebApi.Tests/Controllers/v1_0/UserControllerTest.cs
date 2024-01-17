@@ -1,7 +1,5 @@
-using System.IdentityModel.Tokens.Jwt;
 using System.Text;
 using System.Text.Json;
-using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using TasksWebApi.Models;
 
@@ -15,7 +13,7 @@ public class UserControllerTest : BaseControllerTests
     [TestInitialize]
     public async Task InitializeAsync()
     {
-        WebApplicationFactory<Program> factory = await BuildWebApplicationFactoryAsync(Guid.NewGuid().ToString());
+        var factory = await BuildWebApplicationFactoryAsync(Guid.NewGuid().ToString());
         _client = factory.CreateClient();
         AddApiKeyHeader();
     }
@@ -31,8 +29,8 @@ public class UserControllerTest : BaseControllerTests
     public async Task signin_unauthorized_without_api_key()
     {
         RemoveApiKeyHeader();
-        StringContent content = new StringContent(string.Empty, Encoding.UTF8, "application/json");
-        HttpResponseMessage response = await _client.PostAsync($"{url}/signin", content);
+        var content = new StringContent(string.Empty, Encoding.UTF8, "application/json");
+        var response = await _client.PostAsync($"{url}/signin", content);
 
         Assert.AreEqual(System.Net.HttpStatusCode.Unauthorized, response.StatusCode);
     }
@@ -40,8 +38,8 @@ public class UserControllerTest : BaseControllerTests
     [TestMethod]
     public async Task signin_null_bad_request()
     {
-        StringContent content = new StringContent(string.Empty, Encoding.UTF8, "application/json");
-        HttpResponseMessage response = await _client.PostAsync($"{url}/signin", content);
+        var content = new StringContent(string.Empty, Encoding.UTF8, "application/json");
+        var response = await _client.PostAsync($"{url}/signin", content);
 
         Assert.AreEqual(System.Net.HttpStatusCode.BadRequest, response.StatusCode);
     }
@@ -50,8 +48,8 @@ public class UserControllerTest : BaseControllerTests
     public async Task signin_password_too_sort_bad_request()
     {
         var signInInfo = new SignInRequest("user", "_Ab1");
-        StringContent content = new StringContent(JsonSerializer.Serialize(signInInfo), Encoding.UTF8, "application/json");
-        HttpResponseMessage response = await _client.PostAsync($"{url}/signin", content);
+        var content = new StringContent(JsonSerializer.Serialize(signInInfo), Encoding.UTF8, "application/json");
+        var response = await _client.PostAsync($"{url}/signin", content);
 
         Assert.AreEqual(System.Net.HttpStatusCode.BadRequest, response.StatusCode);
     }
@@ -60,8 +58,8 @@ public class UserControllerTest : BaseControllerTests
     public async Task signin_password_without_digit_unauthorized()
     {
         var signInInfo = new SignInRequest("user", "!_-ABCabcdef");
-        StringContent content = new StringContent(JsonSerializer.Serialize(signInInfo), Encoding.UTF8, "application/json");
-        HttpResponseMessage response = await _client.PostAsync($"{url}/signin", content);
+        var content = new StringContent(JsonSerializer.Serialize(signInInfo), Encoding.UTF8, "application/json");
+        var response = await _client.PostAsync($"{url}/signin", content);
 
         Assert.AreEqual(System.Net.HttpStatusCode.Unauthorized, response.StatusCode);
     }
@@ -70,8 +68,8 @@ public class UserControllerTest : BaseControllerTests
     public async Task signin_password_without_lowercase_unauthorized()
     {
         var signInInfo = new SignInRequest("user", "!_-ABCABC123");
-        StringContent content = new StringContent(JsonSerializer.Serialize(signInInfo), Encoding.UTF8, "application/json");
-        HttpResponseMessage response = await _client.PostAsync($"{url}/signin", content);
+        var content = new StringContent(JsonSerializer.Serialize(signInInfo), Encoding.UTF8, "application/json");
+        var response = await _client.PostAsync($"{url}/signin", content);
 
         Assert.AreEqual(System.Net.HttpStatusCode.Unauthorized, response.StatusCode);
     }
@@ -80,8 +78,8 @@ public class UserControllerTest : BaseControllerTests
     public async Task signin_password_without_upercase_unauthorized()
     {
         var signInInfo = new SignInRequest("user", "!_-abcabc123");
-        StringContent content = new StringContent(JsonSerializer.Serialize(signInInfo), Encoding.UTF8, "application/json");
-        HttpResponseMessage response = await _client.PostAsync($"{url}/signin", content);
+        var content = new StringContent(JsonSerializer.Serialize(signInInfo), Encoding.UTF8, "application/json");
+        var response = await _client.PostAsync($"{url}/signin", content);
 
         Assert.AreEqual(System.Net.HttpStatusCode.Unauthorized, response.StatusCode);
     }
@@ -90,8 +88,8 @@ public class UserControllerTest : BaseControllerTests
     public async Task signin_password_without_non_alphanumeric_unauthorized()
     {
         var signInInfo = new SignInRequest("user", "123ABCabc123");
-        StringContent content = new StringContent(JsonSerializer.Serialize(signInInfo), Encoding.UTF8, "application/json");
-        HttpResponseMessage response = await _client.PostAsync($"{url}/signin", content);
+        var content = new StringContent(JsonSerializer.Serialize(signInInfo), Encoding.UTF8, "application/json");
+        var response = await _client.PostAsync($"{url}/signin", content);
 
         Assert.AreEqual(System.Net.HttpStatusCode.Unauthorized, response.StatusCode);
     }
@@ -100,11 +98,11 @@ public class UserControllerTest : BaseControllerTests
     public async Task signin_ok()
     {
         var signInInfo = new SignInRequest("user", "!_-ABCabc123");
-        StringContent content = new StringContent(JsonSerializer.Serialize(signInInfo), Encoding.UTF8, "application/json");
-        HttpResponseMessage response = await _client.PostAsync($"{url}/signin", content);
+        var content = new StringContent(JsonSerializer.Serialize(signInInfo), Encoding.UTF8, "application/json");
+        var response = await _client.PostAsync($"{url}/signin", content);
 
         var result = await response.Content.ReadAsStringAsync();
-        TokenResponse tokenInfo = JsonSerializer.Deserialize<TokenResponse>(result, new JsonSerializerOptions() { PropertyNameCaseInsensitive = true });
+        var tokenInfo = JsonSerializer.Deserialize<TokenResponse>(result, new JsonSerializerOptions() { PropertyNameCaseInsensitive = true });
         Assert.AreEqual(System.Net.HttpStatusCode.OK, response.StatusCode);
         Assert.IsTrue(tokenInfo != null);
         Assert.IsFalse(string.IsNullOrWhiteSpace(tokenInfo.Token));
@@ -115,8 +113,8 @@ public class UserControllerTest : BaseControllerTests
     public async Task signup_unauthorized_without_api_key()
     {
         RemoveApiKeyHeader();
-        StringContent content = new StringContent(string.Empty, Encoding.UTF8, "application/json");
-        HttpResponseMessage response = await _client.PostAsync($"{url}/signup", content);
+        var content = new StringContent(string.Empty, Encoding.UTF8, "application/json");
+        var response = await _client.PostAsync($"{url}/signup", content);
 
         Assert.AreEqual(System.Net.HttpStatusCode.Unauthorized, response.StatusCode);
     }
@@ -124,8 +122,8 @@ public class UserControllerTest : BaseControllerTests
     [TestMethod]
     public async Task signup_null_bad_request()
     {
-        StringContent content = new StringContent(string.Empty, Encoding.UTF8, "application/json");
-        HttpResponseMessage response = await _client.PostAsync($"{url}/signup", content);
+        var content = new StringContent(string.Empty, Encoding.UTF8, "application/json");
+        var response = await _client.PostAsync($"{url}/signup", content);
 
         Assert.AreEqual(System.Net.HttpStatusCode.BadRequest, response.StatusCode);
     }
@@ -134,8 +132,8 @@ public class UserControllerTest : BaseControllerTests
     public async Task signup_password_too_sort_bad_request()
     {
         var signupInfo = new SignUpRequest("userTest", "user@test.com", "_Ab1");
-        StringContent content = new StringContent(JsonSerializer.Serialize(signupInfo), Encoding.UTF8, "application/json");
-        HttpResponseMessage response = await _client.PostAsync($"{url}/signup", content);
+        var content = new StringContent(JsonSerializer.Serialize(signupInfo), Encoding.UTF8, "application/json");
+        var response = await _client.PostAsync($"{url}/signup", content);
 
         Assert.AreEqual(System.Net.HttpStatusCode.BadRequest, response.StatusCode);
     }
@@ -144,8 +142,8 @@ public class UserControllerTest : BaseControllerTests
     public async Task signup_password_without_digit_bad_request()
     {
         var signupInfo = new SignUpRequest("userTest", "user@test.com", "!_-ABCabcdef");
-        StringContent content = new StringContent(JsonSerializer.Serialize(signupInfo), Encoding.UTF8, "application/json");
-        HttpResponseMessage response = await _client.PostAsync($"{url}/signup", content);
+        var content = new StringContent(JsonSerializer.Serialize(signupInfo), Encoding.UTF8, "application/json");
+        var response = await _client.PostAsync($"{url}/signup", content);
 
         Assert.AreEqual(System.Net.HttpStatusCode.BadRequest, response.StatusCode);
     }
@@ -154,8 +152,8 @@ public class UserControllerTest : BaseControllerTests
     public async Task signup_password_without_lowercase_bad_request()
     {
         var signInInfo = new SignUpRequest("userTest", "user@test.com", "!_-ABCABC123");
-        StringContent content = new StringContent(JsonSerializer.Serialize(signInInfo), Encoding.UTF8, "application/json");
-        HttpResponseMessage response = await _client.PostAsync($"{url}/signup", content);
+        var content = new StringContent(JsonSerializer.Serialize(signInInfo), Encoding.UTF8, "application/json");
+        var response = await _client.PostAsync($"{url}/signup", content);
 
         Assert.AreEqual(System.Net.HttpStatusCode.BadRequest, response.StatusCode);
     }
@@ -164,8 +162,8 @@ public class UserControllerTest : BaseControllerTests
     public async Task signup_password_without_upercase_bad_request()
     {
         var signInInfo = new SignUpRequest("userTest", "user@test.com", "!_-abcabc123");
-        StringContent content = new StringContent(JsonSerializer.Serialize(signInInfo), Encoding.UTF8, "application/json");
-        HttpResponseMessage response = await _client.PostAsync($"{url}/signup", content);
+        var content = new StringContent(JsonSerializer.Serialize(signInInfo), Encoding.UTF8, "application/json");
+        var response = await _client.PostAsync($"{url}/signup", content);
 
         Assert.AreEqual(System.Net.HttpStatusCode.BadRequest, response.StatusCode);
     }
@@ -174,8 +172,8 @@ public class UserControllerTest : BaseControllerTests
     public async Task signup_password_without_non_alphanumeric_bad_request()
     {
         var signInInfo = new SignUpRequest("userTest", "user@test.com", "123ABCabc123");
-        StringContent content = new StringContent(JsonSerializer.Serialize(signInInfo), Encoding.UTF8, "application/json");
-        HttpResponseMessage response = await _client.PostAsync($"{url}/signup", content);
+        var content = new StringContent(JsonSerializer.Serialize(signInInfo), Encoding.UTF8, "application/json");
+        var response = await _client.PostAsync($"{url}/signup", content);
 
         Assert.AreEqual(System.Net.HttpStatusCode.BadRequest, response.StatusCode);
     }
@@ -184,8 +182,8 @@ public class UserControllerTest : BaseControllerTests
     public async Task signup_incorrect_email_bad_request()
     {
         var signInInfo = new SignUpRequest("userTest", "usertest", "!_-ABCabc123");
-        StringContent content = new StringContent(JsonSerializer.Serialize(signInInfo), Encoding.UTF8, "application/json");
-        HttpResponseMessage response = await _client.PostAsync($"{url}/signup", content);
+        var content = new StringContent(JsonSerializer.Serialize(signInInfo), Encoding.UTF8, "application/json");
+        var response = await _client.PostAsync($"{url}/signup", content);
 
         Assert.AreEqual(System.Net.HttpStatusCode.BadRequest, response.StatusCode);
     }
@@ -194,11 +192,11 @@ public class UserControllerTest : BaseControllerTests
     public async Task signup_ok()
     {
         var signInInfo = new SignUpRequest("userTest", "user@test.com", "!_-ABCabc123");
-        StringContent content = new StringContent(JsonSerializer.Serialize(signInInfo), Encoding.UTF8, "application/json");
-        HttpResponseMessage response = await _client.PostAsync($"{url}/signup", content);
+        var content = new StringContent(JsonSerializer.Serialize(signInInfo), Encoding.UTF8, "application/json");
+        var response = await _client.PostAsync($"{url}/signup", content);
 
         var result = await response.Content.ReadAsStringAsync();
-        TokenResponse tokenInfo = JsonSerializer.Deserialize<TokenResponse>(result, new JsonSerializerOptions() { PropertyNameCaseInsensitive = true });
+        var tokenInfo = JsonSerializer.Deserialize<TokenResponse>(result, new JsonSerializerOptions() { PropertyNameCaseInsensitive = true });
         Assert.AreEqual(System.Net.HttpStatusCode.OK, response.StatusCode);
         Assert.IsTrue(tokenInfo != null);
         Assert.IsFalse(string.IsNullOrWhiteSpace(tokenInfo.Token));
@@ -209,8 +207,8 @@ public class UserControllerTest : BaseControllerTests
     public async Task delete_unauthorized_without_api_key()
     {
         RemoveApiKeyHeader();
-        StringContent content = new StringContent(string.Empty, Encoding.UTF8, "application/json");
-        HttpResponseMessage response = await _client.PutAsync($"{url}/delete", content);
+        var content = new StringContent(string.Empty, Encoding.UTF8, "application/json");
+        var response = await _client.PutAsync($"{url}/delete", content);
 
         Assert.AreEqual(System.Net.HttpStatusCode.Unauthorized, response.StatusCode);
     }
@@ -219,8 +217,8 @@ public class UserControllerTest : BaseControllerTests
     public async Task delete_null_bad_request()
     {
         await AdminSignIn();
-        StringContent content = new StringContent(string.Empty, Encoding.UTF8, "application/json");
-        HttpResponseMessage response = await _client.PutAsync($"{url}/delete", content);
+        var content = new StringContent(string.Empty, Encoding.UTF8, "application/json");
+        var response = await _client.PutAsync($"{url}/delete", content);
 
         Assert.AreEqual(System.Net.HttpStatusCode.BadRequest, response.StatusCode);
     }
@@ -230,8 +228,8 @@ public class UserControllerTest : BaseControllerTests
     {
         await AdminSignIn();
         var signupInfo = new UserDeleteRequest("noUser");
-        StringContent content = new StringContent(JsonSerializer.Serialize(signupInfo), Encoding.UTF8, "application/json");
-        HttpResponseMessage response = await _client.PutAsync($"{url}/delete", content);
+        var content = new StringContent(JsonSerializer.Serialize(signupInfo), Encoding.UTF8, "application/json");
+        var response = await _client.PutAsync($"{url}/delete", content);
 
         Assert.AreEqual(System.Net.HttpStatusCode.Conflict, response.StatusCode);
     }
@@ -241,8 +239,8 @@ public class UserControllerTest : BaseControllerTests
     {
         await UserSignIn();
         var signupInfo = new UserDeleteRequest("diego");
-        StringContent content = new StringContent(JsonSerializer.Serialize(signupInfo), Encoding.UTF8, "application/json");
-        HttpResponseMessage response = await _client.PutAsync($"{url}/delete", content);
+        var content = new StringContent(JsonSerializer.Serialize(signupInfo), Encoding.UTF8, "application/json");
+        var response = await _client.PutAsync($"{url}/delete", content);
 
         Assert.AreEqual(System.Net.HttpStatusCode.Forbidden, response.StatusCode);
     }
@@ -252,8 +250,8 @@ public class UserControllerTest : BaseControllerTests
     {
         await AdminSignIn();
         var signupInfo = new UserDeleteRequest("admin");
-        StringContent content = new StringContent(JsonSerializer.Serialize(signupInfo), Encoding.UTF8, "application/json");
-        HttpResponseMessage response = await _client.PutAsync($"{url}/delete", content);
+        var content = new StringContent(JsonSerializer.Serialize(signupInfo), Encoding.UTF8, "application/json");
+        var response = await _client.PutAsync($"{url}/delete", content);
 
         Assert.AreEqual(System.Net.HttpStatusCode.Forbidden, response.StatusCode);
     }
@@ -263,8 +261,8 @@ public class UserControllerTest : BaseControllerTests
     {
         await AdminSignIn();
         var signupInfo = new UserDeleteRequest("user");
-        StringContent content = new StringContent(JsonSerializer.Serialize(signupInfo), Encoding.UTF8, "application/json");
-        HttpResponseMessage response = await _client.PutAsync($"{url}/delete", content);
+        var content = new StringContent(JsonSerializer.Serialize(signupInfo), Encoding.UTF8, "application/json");
+        var response = await _client.PutAsync($"{url}/delete", content);
 
         Assert.AreEqual(System.Net.HttpStatusCode.Conflict, response.StatusCode);
     }
@@ -274,8 +272,8 @@ public class UserControllerTest : BaseControllerTests
     {
         await EmptySignIn();
         var signupInfo = new UserDeleteRequest("diego");
-        StringContent content = new StringContent(JsonSerializer.Serialize(signupInfo), Encoding.UTF8, "application/json");
-        HttpResponseMessage response = await _client.PutAsync($"{url}/delete", content);
+        var content = new StringContent(JsonSerializer.Serialize(signupInfo), Encoding.UTF8, "application/json");
+        var response = await _client.PutAsync($"{url}/delete", content);
 
         Assert.AreEqual(System.Net.HttpStatusCode.NoContent, response.StatusCode);
     }
@@ -285,8 +283,8 @@ public class UserControllerTest : BaseControllerTests
     {
         await AdminSignIn();
         var signupInfo = new UserDeleteRequest("diego");
-        StringContent content = new StringContent(JsonSerializer.Serialize(signupInfo), Encoding.UTF8, "application/json");
-        HttpResponseMessage response = await _client.PutAsync($"{url}/delete", content);
+        var content = new StringContent(JsonSerializer.Serialize(signupInfo), Encoding.UTF8, "application/json");
+        var response = await _client.PutAsync($"{url}/delete", content);
 
         Assert.AreEqual(System.Net.HttpStatusCode.NoContent, response.StatusCode);
     }
@@ -295,8 +293,8 @@ public class UserControllerTest : BaseControllerTests
     public async Task refresh_token_unauthorized_without_api_key()
     {
         RemoveApiKeyHeader();
-        StringContent content = new StringContent(string.Empty, Encoding.UTF8, "application/json");
-        HttpResponseMessage response = await _client.PostAsync($"{url}/refreshToken", content);
+        var content = new StringContent(string.Empty, Encoding.UTF8, "application/json");
+        var response = await _client.PostAsync($"{url}/refreshToken", content);
 
         Assert.AreEqual(System.Net.HttpStatusCode.Unauthorized, response.StatusCode);
     }
@@ -304,8 +302,8 @@ public class UserControllerTest : BaseControllerTests
     [TestMethod]
     public async Task refresh_token_null_bad_request()
     {
-        StringContent content = new StringContent(string.Empty, Encoding.UTF8, "application/json");
-        HttpResponseMessage response = await _client.PostAsync($"{url}/refreshToken", content);
+        var content = new StringContent(string.Empty, Encoding.UTF8, "application/json");
+        var response = await _client.PostAsync($"{url}/refreshToken", content);
 
         Assert.AreEqual(System.Net.HttpStatusCode.BadRequest, response.StatusCode);
     }
@@ -315,8 +313,8 @@ public class UserControllerTest : BaseControllerTests
     {
         var user = await EmptySignIn();
         var refreshTokenRequest = new RefreshTokenRequest("1234", user.RefreshToken);
-        StringContent content = new StringContent(JsonSerializer.Serialize(refreshTokenRequest), Encoding.UTF8, "application/json");
-        HttpResponseMessage response = await _client.PostAsync($"{url}/refreshToken", content);
+        var content = new StringContent(JsonSerializer.Serialize(refreshTokenRequest), Encoding.UTF8, "application/json");
+        var response = await _client.PostAsync($"{url}/refreshToken", content);
 
         Assert.AreEqual(System.Net.HttpStatusCode.Unauthorized, response.StatusCode);
     }
@@ -326,8 +324,8 @@ public class UserControllerTest : BaseControllerTests
     {
         var user = await EmptySignIn();
         var refreshTokenRequest = new RefreshTokenRequest(user.Token, "12345678");
-        StringContent content = new StringContent(JsonSerializer.Serialize(refreshTokenRequest), Encoding.UTF8, "application/json");
-        HttpResponseMessage response = await _client.PostAsync($"{url}/refreshToken", content);
+        var content = new StringContent(JsonSerializer.Serialize(refreshTokenRequest), Encoding.UTF8, "application/json");
+        var response = await _client.PostAsync($"{url}/refreshToken", content);
         response = await _client.PostAsync($"{url}/refreshToken", content);
 
         Assert.AreEqual(System.Net.HttpStatusCode.Unauthorized, response.StatusCode);
@@ -338,9 +336,14 @@ public class UserControllerTest : BaseControllerTests
     {
         var user = await EmptySignIn();
         var refreshTokenRequest = new RefreshTokenRequest(user.Token, user.RefreshToken);
-        StringContent content = new StringContent(JsonSerializer.Serialize(refreshTokenRequest), Encoding.UTF8, "application/json");
-        HttpResponseMessage response = await _client.PostAsync($"{url}/refreshToken", content);
-
+        var content = new StringContent(JsonSerializer.Serialize(refreshTokenRequest), Encoding.UTF8, "application/json");
+        var response = await _client.PostAsync($"{url}/refreshToken", content);
+        
+        var result = await response.Content.ReadAsStringAsync();
+        var tokenInfo = JsonSerializer.Deserialize<TokenResponse>(result, new JsonSerializerOptions() { PropertyNameCaseInsensitive = true });
         Assert.AreEqual(System.Net.HttpStatusCode.OK, response.StatusCode);
+        Assert.IsTrue(tokenInfo != null);
+        Assert.IsFalse(string.IsNullOrWhiteSpace(tokenInfo.Token));
+        Assert.IsFalse(string.IsNullOrWhiteSpace(tokenInfo.RefreshToken));
     }
 }

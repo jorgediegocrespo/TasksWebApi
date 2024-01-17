@@ -12,5 +12,6 @@ public interface ITaskListRepository
     Task AddAsync(TaskListEntity entity, CancellationToken cancellationToken = default);
     Task<TaskListEntity> AttachAsync(int id, byte[] rowVersion);
     Task DeleteAsync(int id, byte[] rowVersion, CancellationToken cancellationToken = default);
+    Task DeleteAsync(string userId, bool includeDeleted, CancellationToken cancellationToken = default);
     Task<bool> ContainsAnyTaskAsync(int id, CancellationToken cancellationToken = default);
 }

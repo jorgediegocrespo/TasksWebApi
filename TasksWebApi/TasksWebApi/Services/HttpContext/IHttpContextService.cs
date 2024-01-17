@@ -5,4 +5,5 @@ namespace TasksWebApi.Services;
 public interface IHttpContextService
 {
     UserResponse GetContextUser();
+    string GetClientIp();
 }

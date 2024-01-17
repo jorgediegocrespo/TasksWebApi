@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using TasksWebApi.DataAccess;
 
@@ -11,9 +12,11 @@ using TasksWebApi.DataAccess;
 namespace TasksWebApi.DataAccess.Migrations
 {
     [DbContext(typeof(TasksDbContext))]
-    partial class TasksDbContextModelSnapshot : ModelSnapshot
+    [Migration("20231204130922_ListNameIndex")]
+    partial class ListNameIndex
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -51,7 +54,7 @@ namespace TasksWebApi.DataAccess.Migrations
                     b.HasData(
                         new
                         {
-                            Id = "6d8e4a25-63b6-43ea-bb44-5ef04d6a5ef1",
+                            Id = "a7b5e9df-3ad3-45f7-ba05-7123e45be3eb",
                             Name = "SuperAdmin",
                             NormalizedName = "SUPERADMIN"
                         });
@@ -259,7 +262,8 @@ namespace TasksWebApi.DataAccess.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.HasIndex("IsDeleted", "Name");
+                    b.HasIndex("IsDeleted", "Name")
+                        .IsUnique();
 
                     b.ToTable("TaskLists", (string)null);
                 });

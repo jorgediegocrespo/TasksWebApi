@@ -3,23 +3,11 @@ using Microsoft.AspNetCore.Mvc.Filters;
 
 namespace TasksWebApi.FilterAttributes;
 
-public class ApiKeyAttribute : ServiceFilterAttribute
-{
-    public ApiKeyAttribute() : base(typeof(ApiKeyAuthorizationFilter))
-    {
-    }
-}
+public class ApiKeyAttribute() : ServiceFilterAttribute(typeof(ApiKeyAuthorizationFilter));
 
-public class ApiKeyAuthorizationFilter : IAuthorizationFilter
+public class ApiKeyAuthorizationFilter(IConfiguration configuration) : IAuthorizationFilter
 {
     private const string API_KEY_HEADER_NAME = "x-api-key";
-
-    private readonly IConfiguration _configuration;
-
-    public ApiKeyAuthorizationFilter(IConfiguration configuration)
-    {
-        _configuration = configuration;
-    }
 
     public void OnAuthorization(AuthorizationFilterContext context)
     {
@@ -36,7 +24,7 @@ public class ApiKeyAuthorizationFilter : IAuthorizationFilter
             return;
         }
         
-        var apiKey = _configuration.GetValue<string>("XApiKey");
+        var apiKey = configuration.GetValue<string>("XApiKey");
         if (apiKey is null)
         {
             context.Result = new UnauthorizedResult();

@@ -6,7 +6,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
-using TasksWebApi.Constants;
+using TasksWebApi.DataAccess;
 using TasksWebApi.DataAccess.Entities;
 using TasksWebApi.DataAccess.Repositories;
 using TasksWebApi.Exceptions;
@@ -18,10 +18,12 @@ namespace TasksWebApi.Tests.Services;
 [TestClass]
 public class UserServiceTests
 {
-    private Mock<UserManager<UserEntity>> _userManagerMock;
-    private Mock<SignInManager<UserEntity>> _signInManagerMock;
-    private Mock<IHttpContextService> _httpContextServiceMock;
-    private Mock<ITaskListRepository> _taskListRepositoryMock;
+    private readonly Mock<UserManager<UserEntity>> _userManagerMock;
+    private readonly Mock<SignInManager<UserEntity>> _signInManagerMock;
+    private readonly Mock<IHttpContextService> _httpContextServiceMock;
+    private readonly Mock<ITaskListRepository> _taskListRepositoryMock;
+    private readonly Mock<IUnitOfWork> _unitOfWorkMock;
+    private readonly Mock<ILogger<UserService>> _loggerUserServiceMock;
     private UserService _userService;
 
     public UserServiceTests()
@@ -29,10 +31,13 @@ public class UserServiceTests
         _userManagerMock = new Mock<UserManager<UserEntity>>(Mock.Of<IUserStore<UserEntity>>(), null, null, null, null, null, null, null, null);
         _httpContextServiceMock = new Mock<IHttpContextService>();
         _taskListRepositoryMock = new Mock<ITaskListRepository>();
+        _unitOfWorkMock = new Mock<IUnitOfWork>();
+        
         var userClaimsPrincipalFactoryMock = new Mock<IUserClaimsPrincipalFactory<UserEntity>>();
         var identityOptionsMock = new Mock<IOptions<IdentityOptions>>();
         var loggerMock = new Mock<ILogger<SignInManager<UserEntity>>>();
         var httpContextAccessorMock = new Mock<IHttpContextAccessor>();
+        _loggerUserServiceMock = new Mock<ILogger<UserService>>();
         _signInManagerMock = new Mock<SignInManager<UserEntity>>(_userManagerMock.Object, httpContextAccessorMock.Object, userClaimsPrincipalFactoryMock.Object, identityOptionsMock.Object, loggerMock.Object, null, null);
 
     }
@@ -98,9 +103,9 @@ public class UserServiceTests
             .Setup(x => x.GetClaimsAsync(It.IsAny<UserEntity>()))
             .ReturnsAsync(new List<Claim>());
 
-        _taskListRepositoryMock
-            .Setup(x => x.GetTotalRecordsAsync(It.IsAny<string>(), It.IsAny<CancellationToken>(), It.IsAny<bool>()))
-            .ReturnsAsync(0);
+        _unitOfWorkMock
+            .Setup(x => x.SaveChangesInTransactionAsync(It.IsAny<Func<Task>>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
         
         var inMemorySettings = new Dictionary<string, string> {
             {"Jwt:Issuer", "test"},
@@ -115,7 +120,7 @@ public class UserServiceTests
             .AddInMemoryCollection(inMemorySettings)
             .Build();
 
-        _userService = new UserService(_userManagerMock.Object, _signInManagerMock.Object, configuration, _httpContextServiceMock.Object, _taskListRepositoryMock.Object);
+        _userService = new UserService(_userManagerMock.Object, _signInManagerMock.Object, configuration, _httpContextServiceMock.Object, _taskListRepositoryMock.Object, _unitOfWorkMock.Object, _loggerUserServiceMock.Object);
         return Task.CompletedTask;
     }
     
@@ -134,15 +139,15 @@ public class UserServiceTests
                 return IdentityResult.Failed();
             });
         
-        SignUpRequest userInfo = new SignUpRequest(userName, "user@user.com", "password");
+        var userInfo = new SignUpRequest(userName, "user@user.com", "password");
         if (userName != "user1")
         {
-            TokenResponse result = await _userService.SignUpAsync(userInfo);
+            var result = await _userService.SignUpAsync(userInfo);
             Assert.IsNull(result);
         }
         else
         {
-            TokenResponse result = await _userService.SignUpAsync(userInfo);
+            var result = await _userService.SignUpAsync(userInfo);
             Assert.IsNotNull(result);
             Assert.IsFalse(string.IsNullOrWhiteSpace(result.Token));
         }
@@ -153,8 +158,8 @@ public class UserServiceTests
     [DataRow(false)]
     public async Task sign_in(bool correctSignIn)
     {
-        string userName = correctSignIn ? "user1" : "user2";
-        string password = correctSignIn ? "!_-ABCabc123" : "123abcABC_-!";
+        var userName = correctSignIn ? "user1" : "user2";
+        var password = correctSignIn ? "!_-ABCabc123" : "123abcABC_-!";
 
         _signInManagerMock
             .Setup(x => x.PasswordSignInAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>(),
@@ -167,39 +172,73 @@ public class UserServiceTests
                 return SignInResult.Failed;
             });
         
-        TokenResponse tokenInfo = await _userService.SignInAsync(new SignInRequest(userName, password));
+        var tokenInfo = await _userService.SignInAsync(new SignInRequest(userName, password));
         Assert.AreEqual(correctSignIn, !string.IsNullOrWhiteSpace(tokenInfo?.Token));
     }
     
     [TestMethod]
-    [DataRow(true, true)]
-    [DataRow(true, false)]
-    [DataRow(false, true)]
-    [DataRow(false, false)]
-    public async Task delete_other(bool contextUserAdmin, bool userToRemoveAdmin)
+    [DataRow(true, true, false)]
+    [DataRow(true, false, false)]
+    [DataRow(false, true, false)]
+    [DataRow(false, false, false)]
+    [DataRow(true, true, true)]
+    [DataRow(true, false, true)]
+    [DataRow(false, true, true)]
+    [DataRow(false, false, true)]
+    public async Task delete(bool contextUserAdmin, bool userToRemoveAdmin, bool hasAnyList)
     {
         _httpContextServiceMock
             .Setup(x => x.GetContextUser())
-            .Returns(() =>
-            {
-                if (contextUserAdmin)
-                    return new UserResponse("1", "user1", "user1@user1.com", new List<string>() { Roles.SUPERADMIN });
-                
-                return new UserResponse("2", "user2", "user2@user2.com", new List<string>());
-            });
-
-        UserDeleteRequest deleteRequest;
-        if (userToRemoveAdmin)
-            deleteRequest = new UserDeleteRequest("user1");
-        else
-            deleteRequest = new UserDeleteRequest("user2");
+            .Returns(() => contextUserAdmin ? 
+                new UserResponse("1", "user1", "user1@user1.com", new List<string>() { Roles.SUPERADMIN }) : 
+                new UserResponse("2", "user2", "user2@user2.com", new List<string>()));
         
-        if (contextUserAdmin && !userToRemoveAdmin)
+        _taskListRepositoryMock
+            .Setup(x => x.GetTotalRecordsAsync(It.IsAny<string>(), It.IsAny<CancellationToken>(), It.IsAny<bool>()))
+            .ReturnsAsync(hasAnyList ? 1 : 0);
+
+        var deleteRequest = userToRemoveAdmin ? new UserDeleteRequest("user1") : new UserDeleteRequest("user2");
+        if (contextUserAdmin && !userToRemoveAdmin && !hasAnyList)
         {
             await _userService.DeleteAsync(deleteRequest);
             Assert.IsTrue(true);
         }
-        else 
+        else if (!contextUserAdmin || userToRemoveAdmin)
             await Assert.ThrowsExceptionAsync<ForbidenActionException>(() => _userService.DeleteAsync(deleteRequest));
+        else
+            await Assert.ThrowsExceptionAsync<NotValidOperationException>(() => _userService.DeleteAsync(deleteRequest));
+    }
+    
+    [TestMethod]
+    [DataRow(true, true, false)]
+    [DataRow(true, false, false)]
+    [DataRow(false, true, false)]
+    [DataRow(false, false, false)]
+    [DataRow(true, true, true)]
+    [DataRow(true, false, true)]
+    [DataRow(false, true, true)]
+    [DataRow(false, false, true)]
+    public async Task delete_with_data(bool contextUserAdmin, bool userToRemoveAdmin, bool hasAnyList)
+    {
+        _httpContextServiceMock
+            .Setup(x => x.GetContextUser())
+            .Returns(() => contextUserAdmin ? 
+                new UserResponse("1", "user1", "user1@user1.com", new List<string>() { Roles.SUPERADMIN }) : 
+                new UserResponse("2", "user2", "user2@user2.com", new List<string>()));
+        
+        _taskListRepositoryMock
+            .Setup(x => x.GetTotalRecordsAsync(It.IsAny<string>(), It.IsAny<CancellationToken>(), It.IsAny<bool>()))
+            .ReturnsAsync(hasAnyList ? 1 : 0);
+
+        var deleteRequest = userToRemoveAdmin ? new UserDeleteRequest("user1") : new UserDeleteRequest("user2");
+        if (contextUserAdmin && !userToRemoveAdmin && !hasAnyList)
+        {
+            await _userService.DeleteWithDataAsync(deleteRequest);
+            Assert.IsTrue(true);
+        }
+        else if (!contextUserAdmin || userToRemoveAdmin)
+            await Assert.ThrowsExceptionAsync<ForbidenActionException>(() => _userService.DeleteAsync(deleteRequest));
+        else
+            await Assert.ThrowsExceptionAsync<NotValidOperationException>(() => _userService.DeleteAsync(deleteRequest));
     }
 }

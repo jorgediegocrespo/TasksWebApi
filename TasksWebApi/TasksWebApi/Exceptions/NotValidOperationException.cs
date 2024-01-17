@@ -1,14 +1,8 @@
 namespace TasksWebApi.Exceptions;
 
-public class NotValidOperationException : Exception
+public class NotValidOperationException(string code, string description) : Exception(code)
 {
-    public string Description { get; protected set; }
+    public string Description { get; protected set; } = description;
 
-    public string Code { get; protected set; }
-
-    public NotValidOperationException(string code, string description) : base(code)
-    {
-        Code = code;
-        Description = description;
-    }
+    public string Code { get; protected set; } = code;
 }

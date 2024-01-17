@@ -2,14 +2,9 @@ using Microsoft.EntityFrameworkCore;
 
 namespace TasksWebApi.DataAccess.Repositories;
 
-public abstract class BaseRepository<T>
+public abstract class BaseRepository<T>(TasksDbContext dbContext)
     where T : class
 {
-    protected readonly TasksDbContext dbContext;
+    protected readonly TasksDbContext dbContext = dbContext;
     protected abstract DbSet<T> DbEntity { get; }
-
-    public BaseRepository(TasksDbContext dbContext)
-    {
-        this.dbContext = dbContext;
-    }
 }

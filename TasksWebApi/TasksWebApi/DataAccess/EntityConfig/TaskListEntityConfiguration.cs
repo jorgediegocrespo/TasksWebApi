@@ -15,7 +15,7 @@ public sealed class TaskListEntityConfiguration : IEntityTypeConfiguration<TaskL
 
         entityBuilder.Property(x => x.Name).IsRequired();
         entityBuilder.HasMany(x => x.Tasks).WithOne(x => x.TaskList);
-        entityBuilder.HasIndex(a => a.Name).IsUnique();
+        entityBuilder.HasIndex(x => new {x.IsDeleted, x.Name});
         
         entityBuilder.HasQueryFilter(x => !x.IsDeleted);
     }

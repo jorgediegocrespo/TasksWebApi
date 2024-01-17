@@ -3,7 +3,7 @@ namespace TasksWebApi.DataAccess;
 public interface IUnitOfWork
 {
     void ClearTracker();
-    public Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
-    public Task<int> SaveChangesInTransactionAsync(Func<Task<int>> operation, CancellationToken cancellationToken = default);
-    Task ExecuteInTransactionAsync(Func<Task> operation, CancellationToken cancellationToken = default);
+    Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
+    Task<int> SaveChangesWithoutSoftDeleteAsync(CancellationToken cancellationToken = default);
+    Task SaveChangesInTransactionAsync(Func<Task> operation, CancellationToken cancellationToken = default);
 }

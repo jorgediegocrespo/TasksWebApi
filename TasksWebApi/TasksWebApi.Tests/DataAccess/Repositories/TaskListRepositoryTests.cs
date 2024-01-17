@@ -89,7 +89,7 @@ public class TaskListRepositoryTests : BaseRepositoryTests
     [DataRow("List 1", 2, true)]
     public async Task exists_other_list_with_same_name_task_list(string newListName, int newListId, bool expectedResult)
     {
-        bool result = await _repository.ExistsOtherListWithSameNameAsync(user1Id, newListId, newListName);
+        var result = await _repository.ExistsOtherListWithSameNameAsync(user1Id, newListId, newListName);
         Assert.AreEqual(expectedResult, result);
     }
     
@@ -98,14 +98,14 @@ public class TaskListRepositoryTests : BaseRepositoryTests
     [DataRow(2, true)]
     public async Task exists_task_list(int listId, bool expectedResult)
     {
-        bool result = await _repository.ExistsAsync(user1Id, listId);
+        var result = await _repository.ExistsAsync(user1Id, listId);
         Assert.AreEqual(expectedResult, result);
     }
     
     [TestMethod]
     public async Task get_total_record_task_list()
     {
-        int result = await _repository.GetTotalRecordsAsync(user1Id);
+        var result = await _repository.GetTotalRecordsAsync(user1Id);
         Assert.AreEqual(7, result);
     }
 
@@ -119,7 +119,7 @@ public class TaskListRepositoryTests : BaseRepositoryTests
         var resultList = result.ToList();
 
         Assert.AreEqual(hopeIds.Length, resultList.Count);
-        for (int i = 0; i < resultList.Count; i++)
+        for (var i = 0; i < resultList.Count; i++)
             Assert.AreEqual(hopeIds[i], resultList[i].Id);
     }
 
@@ -138,7 +138,7 @@ public class TaskListRepositoryTests : BaseRepositoryTests
         await _repository.AddAsync(new TaskListEntity { Name = "List 8", UserId = user1Id});
         await _context.SaveChangesAsync();
 
-        int count = await _context.TaskLists.Where(x => x.UserId == user1Id).CountAsync();
+        var count = await _context.TaskLists.Where(x => x.UserId == user1Id).CountAsync();
         Assert.AreEqual(count, 8);
     }
     
@@ -154,27 +154,43 @@ public class TaskListRepositoryTests : BaseRepositoryTests
         var result = await _context.TaskLists.FirstOrDefaultAsync(x => x.Id == 4);
         Assert.AreEqual("List 8", result?.Name);
     }
-
+    
     [TestMethod]
-    public async Task delete_task_list()
+    [DataRow(4, true)]
+    [DataRow(7, true)]
+    [DataRow(5, false)]
+    [DataRow(8, true)]
+    public async Task delete_task_list(int id, bool removed)
     {
-        var dbTaskList = await _repository.GetAsync(4);
-        await _repository.DeleteAsync(4, dbTaskList.RowVersion);
+        var countBefore = await _context.TaskLists.Where(x => x.UserId == user1Id).CountAsync();
+        var dbTaskList = await _repository.GetAsync(id);
+        if (dbTaskList == null)
+            return;
+        
+        await _repository.DeleteAsync(id, dbTaskList.RowVersion);
         await _context.SaveChangesAsync();
         
-        int count = await _context.TaskLists.Where(x => x.UserId == user1Id).CountAsync();
-        Assert.AreEqual(count, 6);
+        var countAfter = await _context.TaskLists.Where(x => x.UserId == user1Id).CountAsync();
+        Assert.AreEqual(countBefore, removed ? countAfter + 1 : countAfter);
     }
     
     [TestMethod]
-    [DataRow(7, true)]
-    [DataRow(5, false)]
-    public async Task delete_task_list(int id, bool expectedResult)
+    [DataRow(1, 8)]
+    [DataRow(2, 2)]
+    public async Task delete_by_user_task_list(int userId, int removedListCount)
     {
-        bool containsAnyTask = await _repository.ContainsAnyTaskAsync(id);
-        await _context.SaveChangesAsync();
+        var userIdString = userId switch
+        {
+            1 => user1Id,
+            2 => user2Id,
+            _ => throw new NotImplementedException()
+        };
+        var countBefore = await _context.TaskLists.IgnoreQueryFilters().Where(x => x.UserId == userIdString).CountAsync();
+        await _repository.DeleteAsync(userIdString, true);
+        await _context.SaveChangesWithoutSoftDeleteAsync();
         
-        Assert.AreEqual(expectedResult, containsAnyTask);
+        var countAfter = await _context.TaskLists.IgnoreQueryFilters().Where(x => x.UserId == userIdString).CountAsync();
+        Assert.AreEqual(countBefore, countAfter + removedListCount);
     }
     
     [TestMethod]
@@ -183,7 +199,7 @@ public class TaskListRepositoryTests : BaseRepositoryTests
     [DataRow(25, false)]
     public async Task contains_any_task_task_list(int taskListId, bool expectedResult)
     {
-        bool result = await _repository.ContainsAnyTaskAsync(taskListId);
+        var result = await _repository.ContainsAnyTaskAsync(taskListId);
         Assert.AreEqual(expectedResult, result);
     }
 }

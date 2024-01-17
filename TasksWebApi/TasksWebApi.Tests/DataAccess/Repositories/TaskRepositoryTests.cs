@@ -69,7 +69,7 @@ public class TaskRepositoryTests : BaseRepositoryTests
     [DataRow(3, 0)]
     public async Task get_total_record_tasks(int taskListId, int expectedResult)
     {
-        int result = await _repository.GetTotalRecordsAsync(taskListId);
+        var result = await _repository.GetTotalRecordsAsync(taskListId);
         Assert.AreEqual(expectedResult, result);
     }
     
@@ -85,7 +85,7 @@ public class TaskRepositoryTests : BaseRepositoryTests
         var resultList = result.ToList();
 
         Assert.AreEqual(hopeIds.Length, resultList.Count);
-        for (int i = 0; i < resultList.Count; i++)
+        for (var i = 0; i < resultList.Count; i++)
             Assert.AreEqual(hopeIds[i], resultList[i].Id);
     }
     
@@ -107,11 +107,11 @@ public class TaskRepositoryTests : BaseRepositoryTests
     [DataRow(2, "Task 10", null)]
     public async Task add_task(int taskListId, string description, string notes)
     {
-        int previousCount = await _context.Tasks.Where(x => x.TaskListId == taskListId).CountAsync();
+        var previousCount = await _context.Tasks.Where(x => x.TaskListId == taskListId).CountAsync();
         await _repository.AddAsync(new TaskEntity { TaskListId = taskListId, Description = description, Notes = notes});
         await _context.SaveChangesAsync();
         
-        int count = await _context.Tasks.Where(x => x.TaskListId == taskListId).CountAsync();
+        var count = await _context.Tasks.Where(x => x.TaskListId == taskListId).CountAsync();
         Assert.AreEqual(count, previousCount + 1);
     }
     
@@ -141,7 +141,7 @@ public class TaskRepositoryTests : BaseRepositoryTests
         await _repository.DeleteAsync(4, dbTask.RowVersion);
         await _context.SaveChangesAsync();
         
-        int count = await _context.Tasks.CountAsync();
+        var count = await _context.Tasks.CountAsync();
         Assert.AreEqual(count, 8);
     }
     
@@ -154,7 +154,7 @@ public class TaskRepositoryTests : BaseRepositoryTests
         await _repository.DeleteAllAsync(taskListId);
         await _context.SaveChangesAsync();
         
-        int count = await _context.Tasks.CountAsync();
+        var count = await _context.Tasks.CountAsync();
         Assert.AreEqual(count, expectedTaskCount);
     }
 }

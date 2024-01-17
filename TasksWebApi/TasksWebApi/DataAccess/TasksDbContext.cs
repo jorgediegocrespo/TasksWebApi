@@ -1,6 +1,5 @@
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.ChangeTracking;
 using TasksWebApi.DataAccess.Entities;
 using TasksWebApi.DataAccess.EntityConfig;
 using TasksWebApi.Services;
@@ -51,22 +50,31 @@ public class TasksDbContext : IdentityDbContext<UserEntity>
         UpdateBaseEntityInfo();
         return base.SaveChangesAsync(cancellationToken);
     }
-
-    private void UpdateBaseEntityInfo()
+    
+    public Task<int> SaveChangesWithoutSoftDeleteAsync(CancellationToken cancellationToken = default)
     {
-        foreach (EntityEntry entry in ChangeTracker.Entries())
+        UpdateBaseEntityInfo(false);
+        return base.SaveChangesAsync(cancellationToken);
+    }
+
+    private void UpdateBaseEntityInfo(bool softDelete = true)
+    {
+        foreach (var entry in ChangeTracker.Entries())
         {
-            BaseEntity baseEntity = entry.Entity as BaseEntity;
+            var baseEntity = entry.Entity as BaseEntity;
             if (baseEntity == null)
                 return;
 
             switch (entry.State)
             {
                 case EntityState.Deleted:
-                    entry.State = EntityState.Modified;
-                    baseEntity.IsDeleted = true;
-                    baseEntity.DeleteUser = _httpContextService.GetContextUser().Id;
-                    baseEntity.DateOfDelete = DateTime.UtcNow;
+                    if (softDelete)
+                    {
+                        entry.State = EntityState.Modified;
+                        baseEntity.IsDeleted = true;
+                        baseEntity.DeleteUser = _httpContextService.GetContextUser().Id;
+                        baseEntity.DateOfDelete = DateTime.UtcNow;
+                    }
                     break;
                 case EntityState.Added:
                     baseEntity.CreationUser = _httpContextService.GetContextUser().Id;

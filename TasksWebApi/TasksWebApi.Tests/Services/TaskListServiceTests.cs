@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using TasksWebApi.Constants;
@@ -14,18 +15,12 @@ namespace TasksWebApi.Tests.Services;
 [TestClass]
 public class TaskListServiceTests
 {
-    private readonly Mock<IUnitOfWork> _unitOfWorkMock;
-    private readonly Mock<ITaskListRepository> _taskListRepositoryMock;
-    private readonly Mock<IHttpContextService> _httpContextServiceMock;
+    private readonly Mock<IUnitOfWork> _unitOfWorkMock = new();
+    private readonly Mock<ITaskListRepository> _taskListRepositoryMock = new();
+    private readonly Mock<IHttpContextService> _httpContextServiceMock = new();
+    private readonly Mock<ILogger<TaskListService>> _loggerTaskListServiceMock = new();
     private TaskListService _taskListService;
-    
-    public TaskListServiceTests()
-    {
-        _unitOfWorkMock = new Mock<IUnitOfWork>();
-        _taskListRepositoryMock = new Mock<ITaskListRepository>();
-        _httpContextServiceMock = new Mock<IHttpContextService>();
-    }
-    
+
     [TestInitialize]
     public Task InitializeAsync()
     {
@@ -34,7 +29,7 @@ public class TaskListServiceTests
             .ReturnsAsync((string userId, int pageSize, int pageNumber, CancellationToken cancellationToken) =>
             {
                 List<object> auxList = new();
-                for (int i = 0; i < 7; i++)
+                for (var i = 0; i < 7; i++)
                     auxList.Add(new());
                 
                 var paginatedAuxList = auxList
@@ -83,8 +78,8 @@ public class TaskListServiceTests
         _httpContextServiceMock
             .Setup(x => x.GetContextUser())
             .Returns(new UserResponse(Guid.NewGuid().ToString(), "user1", "user1@dicres.com", new List<string>()));
-
-        _taskListService = new TaskListService(_unitOfWorkMock.Object, _taskListRepositoryMock.Object, _httpContextServiceMock.Object);
+        
+        _taskListService = new TaskListService(_unitOfWorkMock.Object, _taskListRepositoryMock.Object, _httpContextServiceMock.Object, _loggerTaskListServiceMock.Object);
         return Task.CompletedTask;
     }
 
@@ -94,7 +89,7 @@ public class TaskListServiceTests
     [DataRow(2, 5, 0)]
     public async Task get_all_task_lists(int pageSize, int pageNumber, int expectedCount)
     {
-        PaginationResponse<ReadTaskListResponse> result = await _taskListService.GetAllAsync(new PaginationRequest(pageSize, pageNumber));
+        var result = await _taskListService.GetAllAsync(new PaginationRequest(pageSize, pageNumber));
 
         Assert.AreEqual(7, result.TotalRegisters);
         Assert.AreEqual(expectedCount, result.Result.Count());
@@ -105,8 +100,8 @@ public class TaskListServiceTests
     [DataRow(8, true)]
     public async Task get_task_lists(int id, bool expectedNull)
     {
-        TaskListEntity givenTaskListsList = GivenTaskList(id);
-        ReadTaskListResponse taskList = await _taskListService.GetAsync(id);
+        var givenTaskListsList = GivenTaskList(id);
+        var taskList = await _taskListService.GetAsync(id);
 
         if (expectedNull)
             Assert.AreEqual(null, taskList);
@@ -136,7 +131,7 @@ public class TaskListServiceTests
             await Assert.ThrowsExceptionAsync<NotValidOperationException>(() => _taskListService.AddAsync(taskList), ErrorCodes.TASK_LIST_NAME_EXISTS);
         else
         {
-            int taskListId = await _taskListService.AddAsync(taskList);
+            var taskListId = await _taskListService.AddAsync(taskList);
             Assert.IsInstanceOfType(taskListId, typeof(int));
         }
     }
@@ -153,7 +148,7 @@ public class TaskListServiceTests
             .Setup(x => x.ExistsOtherListWithSameNameAsync(It.IsAny<string>(),It.IsAny<int>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(existsPrevious);
         
-        int taskId = 2;
+        var taskId = 2;
         _httpContextServiceMock
             .Setup(x => x.GetContextUser())
             .Returns(() =>
@@ -173,7 +168,7 @@ public class TaskListServiceTests
             await Assert.ThrowsExceptionAsync<DbUpdateConcurrencyException>(() => _taskListService.UpdateAsync(taskList));
         else
         {
-            Task result = _taskListService.UpdateAsync(taskList);
+            var result = _taskListService.UpdateAsync(taskList);
             Assert.AreEqual(Task.CompletedTask, result);
         }
     }
@@ -187,7 +182,7 @@ public class TaskListServiceTests
     [DataRow(3, false, true, true)]
     public async Task delete_task_list(int id, bool containsAnyTask, bool ownsTheList, bool concurrencyError)
     {
-        TaskListEntity givenTaskList = GivenTaskList(id);
+        var givenTaskList = GivenTaskList(id);
         
         _taskListRepositoryMock
             .Setup(x => x.ContainsAnyTaskAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()))
@@ -203,7 +198,7 @@ public class TaskListServiceTests
                 return new UserResponse($"{id + 1}", "jorge", "jorge@jorge.dicres", new List<string>());
             });
         
-        bool existsTaskList = id <= 7;
+        var existsTaskList = id <= 7;
         if (existsTaskList && !containsAnyTask && ownsTheList && !concurrencyError)
             await _taskListService.DeleteAsync(new DeleteRequest(givenTaskList.Id, new byte[]{0x01}));
         
@@ -221,7 +216,7 @@ public class TaskListServiceTests
     {
         var result = new List<TaskListEntity>();
 
-        for (int i = 1; i <= count; i++)
+        for (var i = 1; i <= count; i++)
             result.Add(new() { Name = $"List {i}" });
 
         return result;

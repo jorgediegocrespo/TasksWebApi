@@ -23,7 +23,7 @@ public static class CustomServicesStartup
     public static void RegisterDbContext(this WebApplicationBuilder builder)
     {
         var connectionString = builder.Configuration.GetConnectionString("DataBaseConnection");
-        builder.Services.AddDbContext<TasksDbContext>(options => options.UseSqlServer(connectionString), ServiceLifetime.Transient);
+        builder.Services.AddDbContext<TasksDbContext>(options => options.UseSqlServer(connectionString));
         builder.Services.AddTransient<IUnitOfWork, UnitOfWork>();
     }
 
@@ -57,7 +57,7 @@ public static class CustomServicesStartup
 
     private static void RegisterServices(IServiceCollection services)
     {
-        services.AddTransient<IHttpContextService, HttpContextService>();
+        services.AddSingleton<IHttpContextService, HttpContextService>();
         services.AddTransient<IUserService, UserService>();
         services.AddTransient<ITaskListService, TaskListService>();
         services.AddTransient<ITaskService, TaskService>();

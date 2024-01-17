@@ -1,43 +1,25 @@
 namespace TasksWebApi.DataAccess;
 
-public class UnitOfWork : IUnitOfWork
+public class UnitOfWork(TasksDbContext tasksDbContext) : IUnitOfWork
 {
-    private readonly TasksDbContext _tasksDbContext;
-
-    public UnitOfWork(TasksDbContext tasksDbContext)
-    {
-        _tasksDbContext = tasksDbContext;
-    }
-
     public void ClearTracker()
     {
-        _tasksDbContext.ChangeTracker.Clear();
+        tasksDbContext.ChangeTracker.Clear();
     }
 
     public Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
     {
-        return _tasksDbContext.SaveChangesAsync(cancellationToken);
+        return tasksDbContext.SaveChangesAsync(cancellationToken);
+    }
+    
+    public Task<int> SaveChangesWithoutSoftDeleteAsync(CancellationToken cancellationToken = default)
+    {
+        return tasksDbContext.SaveChangesWithoutSoftDeleteAsync(cancellationToken);
     }
 
-    public async Task<int> SaveChangesInTransactionAsync(Func<Task<int>> operation, CancellationToken cancellationToken = default)
+    public async Task SaveChangesInTransactionAsync(Func<Task> operation, CancellationToken cancellationToken = default)
     {
-        await using var transaction = await _tasksDbContext.Database.BeginTransactionAsync(cancellationToken);
-        try
-        {
-            int result = await operation();
-            await transaction.CommitAsync(cancellationToken);
-            return result;
-        }
-        catch
-        {
-            await transaction.RollbackAsync(cancellationToken);
-            throw;
-        }
-    }
-
-    public async Task ExecuteInTransactionAsync(Func<Task> operation, CancellationToken cancellationToken = default)
-    {
-        await using var transaction = await _tasksDbContext.Database.BeginTransactionAsync(cancellationToken);
+        await using var transaction = await tasksDbContext.Database.BeginTransactionAsync(cancellationToken);
         try
         {
             await operation();

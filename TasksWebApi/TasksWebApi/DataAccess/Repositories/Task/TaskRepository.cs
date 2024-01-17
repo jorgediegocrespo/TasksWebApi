@@ -4,11 +4,8 @@ using TasksWebApi.Extensions;
 
 namespace TasksWebApi.DataAccess.Repositories;
 
-public class TaskRepository : BaseRepository<TaskEntity>,  ITaskRepository
+public class TaskRepository(TasksDbContext dbContext) : BaseRepository<TaskEntity>(dbContext), ITaskRepository
 {
-    public TaskRepository(TasksDbContext dbContext) : base(dbContext)
-    { }
-
     protected override DbSet<TaskEntity> DbEntity => dbContext.Tasks;
     
     public async Task<int> GetTotalRecordsAsync(int taskListId, CancellationToken cancellationToken = default)
@@ -43,7 +40,7 @@ public class TaskRepository : BaseRepository<TaskEntity>,  ITaskRepository
 
     public Task<TaskEntity> AttachAsync(int id, byte[] rowVersion)
     {
-        TaskEntity entity = new TaskEntity { Id = id, RowVersion = rowVersion};
+        var entity = new TaskEntity { Id = id, RowVersion = rowVersion};
         DbEntity.Attach(entity);
 
         return Task.FromResult(entity);

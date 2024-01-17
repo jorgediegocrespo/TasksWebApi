@@ -4,11 +4,9 @@ using TasksWebApi.Extensions;
 
 namespace TasksWebApi.DataAccess.Repositories;
 
-public class TaskListRepository : BaseRepository<TaskListEntity>,  ITaskListRepository
+public class TaskListRepository(TasksDbContext dbContext)
+    : BaseRepository<TaskListEntity>(dbContext), ITaskListRepository
 {
-    public TaskListRepository(TasksDbContext dbContext) : base(dbContext)
-    { }
-
     protected override DbSet<TaskListEntity> DbEntity => dbContext.TaskLists;
     
     public async Task<bool> ExistsOtherListWithSameNameAsync(string userId, int id, string name, CancellationToken cancellationToken = default)
@@ -67,7 +65,7 @@ public class TaskListRepository : BaseRepository<TaskListEntity>,  ITaskListRepo
 
     public Task<TaskListEntity> AttachAsync(int id, byte[] rowVersion)
     {
-        TaskListEntity entity = new TaskListEntity { Id = id, RowVersion = rowVersion};
+        var entity = new TaskListEntity { Id = id, RowVersion = rowVersion};
         DbEntity.Attach(entity);
 
         return Task.FromResult(entity);
@@ -76,6 +74,19 @@ public class TaskListRepository : BaseRepository<TaskListEntity>,  ITaskListRepo
     public async Task DeleteAsync(int id, byte[] rowVersion, CancellationToken cancellationToken = default)
     {
         await DbEntity.RemoveConcurrentlyAsync(id, rowVersion, cancellationToken);
+    }
+    
+    public async Task DeleteAsync(string userId, bool includeDeleted, CancellationToken cancellationToken = default)
+    {
+        if (includeDeleted)
+            await DbEntity
+                .IgnoreQueryFilters()
+                .Where(x => x.UserId == userId)
+                .ExecuteDeleteAsync(cancellationToken);
+        else
+            await DbEntity
+                .Where(x => x.UserId == userId)
+                .ExecuteDeleteAsync(cancellationToken);
     }
 
     public Task<bool> ContainsAnyTaskAsync(int id, CancellationToken cancellationToken = default)

@@ -2,12 +2,7 @@ using TasksWebApi.DataAccess;
 
 namespace TasksWebApi.Services;
 
-public abstract class BaseService : IBaseService
+public abstract class BaseService(IUnitOfWork unitOfWork) : IBaseService
 {
-    protected readonly IUnitOfWork unitOfWork;
-    
-    public BaseService(IUnitOfWork unitOfWork)
-    {
-        this.unitOfWork = unitOfWork;
-    }
+    protected readonly IUnitOfWork unitOfWork = unitOfWork;
 }

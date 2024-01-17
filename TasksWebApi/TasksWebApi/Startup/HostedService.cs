@@ -6,18 +6,11 @@ using TasksWebApi.DataAccess.Seed;
 
 namespace TasksWebApi.Startup;
 
-public class HostedService : IHostedService 
+public class HostedService(IServiceScopeFactory serviceScopeFactory) : IHostedService
 {
-    private readonly IServiceScopeFactory _serviceScopeFactory;
-
-    public HostedService(IServiceScopeFactory serviceScopeFactory)
-    {
-        _serviceScopeFactory = serviceScopeFactory;
-    }
-
     public async Task StartAsync(CancellationToken cancellationToken)
     {
-        using var scope = _serviceScopeFactory.CreateScope();
+        using var scope = serviceScopeFactory.CreateScope();
         var services = scope.ServiceProvider;
         var context = services.GetService<TasksDbContext>();
         await context!.Database.MigrateAsync(cancellationToken);

@@ -1,4 +1,5 @@
 using Asp.Versioning;
+using Audit.WebApi;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -11,19 +12,13 @@ namespace TasksWebApi.Controllers.V1_0;
 [ApiVersion("1.0")]
 [ApiKey]
 [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
-public class TaskController : BaseController
+public class TaskController(ITaskService service) : BaseController
 {
-    private readonly ITaskService _service;
-    
-    public TaskController(ITaskService service) : base()
-    {
-        _service = service;
-    }
-    
     [HttpPost]
     [Route("getAll")]
     [ProducesResponseType(typeof(PaginationResponse<ReadTaskResponse>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [AuditIgnore]
     public async Task<IActionResult> GetAllAsync([FromBody]TaskPaginationRequest request, CancellationToken cancellationToken = default)
     {
         if (request == null)
@@ -32,7 +27,7 @@ public class TaskController : BaseController
         if (!ModelState.IsValid)
             return BadRequest();
 
-        var entities = await _service.GetAllAsync(request, cancellationToken);
+        var entities = await service.GetAllAsync(request, cancellationToken);
         return Ok(entities);
     }
 
@@ -40,9 +35,10 @@ public class TaskController : BaseController
     [Route("{id}")]
     [ProducesResponseType(typeof(ReadTaskResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [AuditIgnore]
     public async Task<IActionResult> GetByIdAsync(int id, CancellationToken cancellationToken = default)
     {
-        var entity = await _service.GetAsync(id, cancellationToken);
+        var entity = await service.GetAsync(id, cancellationToken);
         if (entity == null)
             return NotFound();
         
@@ -61,7 +57,7 @@ public class TaskController : BaseController
         if (!ModelState.IsValid)
             return BadRequest();
 
-        int createdId = await _service.AddAsync(item, cancellationToken);
+        var createdId = await service.AddAsync(item, cancellationToken);
         return Created(nameof(GetByIdAsync), new { id = createdId });
     }
 
@@ -77,7 +73,7 @@ public class TaskController : BaseController
         if (!ModelState.IsValid)
             return BadRequest();
 
-        await _service.UpdateAsync(item, cancellationToken);
+        await service.UpdateAsync(item, cancellationToken);
         return NoContent();
     }
 
@@ -91,7 +87,7 @@ public class TaskController : BaseController
         if (!ModelState.IsValid)
             return BadRequest();
         
-        await _service.DeleteAsync(deleteRequest, cancellationToken);
+        await service.DeleteAsync(deleteRequest, cancellationToken);
         return NoContent();
     }
     
@@ -105,7 +101,7 @@ public class TaskController : BaseController
         if (!ModelState.IsValid)
             return BadRequest();
         
-        await _service.DeleteAllInListAsync(deleteRequest, cancellationToken);
+        await service.DeleteAllInListAsync(deleteRequest, cancellationToken);
         return NoContent();
     }
 }

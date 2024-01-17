@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using TasksWebApi.Constants;
@@ -13,20 +14,13 @@ namespace TasksWebApi.Tests.Services;
 [TestClass]
 public class TaskServiceTests
 {
-    private readonly Mock<IUnitOfWork> _unitOfWorkMock;
-    private readonly Mock<ITaskRepository> _taskRepositoryMock;
-    private readonly Mock<ITaskListRepository> _taskListRepositoryMock;
-    private readonly Mock<IHttpContextService> _httpContextServiceMock;
+    private readonly Mock<IUnitOfWork> _unitOfWorkMock = new();
+    private readonly Mock<ITaskRepository> _taskRepositoryMock = new();
+    private readonly Mock<ITaskListRepository> _taskListRepositoryMock = new();
+    private readonly Mock<IHttpContextService> _httpContextServiceMock = new();
+    private readonly Mock<ILogger<TaskService>> _loggerTaskServiceMock = new();
     private TaskService _taskService;
 
-    public TaskServiceTests()
-    {
-        _unitOfWorkMock = new Mock<IUnitOfWork>();
-        _taskRepositoryMock = new Mock<ITaskRepository>();
-        _taskListRepositoryMock = new Mock<ITaskListRepository>();
-        _httpContextServiceMock = new Mock<IHttpContextService>();
-    }
-    
     [TestInitialize]
     public Task InitializeAsync()
     {
@@ -38,7 +32,7 @@ public class TaskServiceTests
             .Setup(x => x.GetAllAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((int taskListId, int pageSize, int pageNumber, CancellationToken cancellationToken) =>
             {
-                int tasksInList = taskListId switch
+                var tasksInList = taskListId switch
                 {
                     1 => 2,
                     2 => 7,
@@ -48,7 +42,7 @@ public class TaskServiceTests
                     return GivenTasks(0);
                 
                 List<object> auxList = new();
-                for (int i = 0; i < tasksInList; i++)
+                for (var i = 0; i < tasksInList; i++)
                     auxList.Add(new());
                 
                 var paginatedAuxList = auxList
@@ -101,7 +95,7 @@ public class TaskServiceTests
             .Setup(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(1);
         
-        _taskService = new TaskService(_unitOfWorkMock.Object, _taskRepositoryMock.Object, _taskListRepositoryMock.Object, _httpContextServiceMock.Object);
+        _taskService = new TaskService(_unitOfWorkMock.Object, _taskRepositoryMock.Object, _taskListRepositoryMock.Object, _httpContextServiceMock.Object, _loggerTaskServiceMock.Object);
         return Task.CompletedTask;
     }
     
@@ -115,7 +109,7 @@ public class TaskServiceTests
     [DataRow(3, 2, 1, 0, 0)]
     public async Task get_all_tasks(int taskListId, int pageSize, int pageNumber, int expectedTotalRegister, int expectedCount)
     {
-        PaginationResponse<ReadTaskResponse> result = await _taskService.GetAllAsync(new TaskPaginationRequest(taskListId, pageSize, pageNumber));
+        var result = await _taskService.GetAllAsync(new TaskPaginationRequest(taskListId, pageSize, pageNumber));
 
         Assert.AreEqual(expectedTotalRegister, result.TotalRegisters);
         Assert.AreEqual(expectedCount, result.Result.Count());
@@ -126,8 +120,8 @@ public class TaskServiceTests
     [DataRow(10, true)]
     public async Task get_task(int id, bool expectedNull)
     {
-        TaskEntity givenTask = GivenTask(id);
-        ReadTaskResponse task = await _taskService.GetAsync(id);
+        var givenTask = GivenTask(id);
+        var task = await _taskService.GetAsync(id);
 
         if (expectedNull)
             Assert.AreEqual(null, task);
@@ -154,7 +148,7 @@ public class TaskServiceTests
             await Assert.ThrowsExceptionAsync<NotValidOperationException>(() => _taskService.AddAsync(taskList), ErrorCodes.TASK_LIST_NOT_EXISTS);
         else
         {
-            int taskListId = await _taskService.AddAsync(taskList);
+            var taskListId = await _taskService.AddAsync(taskList);
             Assert.IsInstanceOfType(taskListId, typeof(int));
         }
     }
@@ -207,7 +201,7 @@ public class TaskServiceTests
     {
         var result = new List<TaskEntity>();
 
-        for (int i = 1; i <= count; i++)
+        for (var i = 1; i <= count; i++)
             result.Add(new() { Description = $"Task {i}" });
 
         return result;

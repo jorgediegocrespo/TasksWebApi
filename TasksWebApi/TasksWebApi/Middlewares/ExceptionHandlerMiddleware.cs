@@ -4,20 +4,13 @@ using TasksWebApi.Exceptions;
 
 namespace TasksWebApi.Middlewares;
 
-public class ExceptionHandlerMiddleware
+public class ExceptionHandlerMiddleware(RequestDelegate next)
 {
-    private readonly RequestDelegate _next;
-
-    public ExceptionHandlerMiddleware(RequestDelegate next)
-    {
-        _next = next;
-    }
-
     public async Task InvokeAsync(HttpContext context)
     {
         try
         {
-            await _next(context);
+            await next(context);
         }
         catch (Exception ex)
         {
@@ -48,7 +41,7 @@ public class ExceptionHandlerMiddleware
         context.Response.ContentType = "application/json";
         context.Response.StatusCode = (int)statusCode;
 
-        string errorBody = JsonSerializer.Serialize(new { error_code = errorCode, error_description = errorDescription });
+        var errorBody = JsonSerializer.Serialize(new { error_code = errorCode, error_description = errorDescription });
         return context.Response.WriteAsync(errorBody);
     }
 }
