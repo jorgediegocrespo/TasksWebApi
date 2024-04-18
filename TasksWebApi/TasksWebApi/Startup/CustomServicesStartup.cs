@@ -1,6 +1,5 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection.Extensions;
 using TasksWebApi.DataAccess;
 using TasksWebApi.DataAccess.Entities;
 using TasksWebApi.DataAccess.Repositories;
@@ -11,6 +10,29 @@ namespace TasksWebApi.Startup;
 
 public static class CustomServicesStartup
 {
+    public static void RegisterConfigurationValuesService(this IServiceCollection services, IConfiguration configuration)
+    {
+        var useVault = configuration.GetValue<bool>("ConfigurationValues:UseVault");
+        if (useVault)
+        {
+            services.Configure<VaultSettings>(configuration);
+            services.PostConfigure<VaultSettings>(settings => settings.UpdateUrl(configuration.GetValue<string>("ConfigurationValues:VaultUrl")));
+            services.AddSingleton<IConfigurationValuesService, VaultConfigurationValuesService>();
+        }
+        else
+        {
+            services.AddSingleton<IConfigurationValuesService, AppSettingsConfigurationValuesService>();
+        }
+    }
+
+    public static void RegisterDbContext(this WebApplicationBuilder builder)
+    {
+        var configurationValues = builder.Services.BuildServiceProvider().GetService<IConfigurationValuesService>();
+        var connectionString = configurationValues.GetDataBaseConnection().Result;
+        builder.Services.AddDbContext<TasksDbContext>(options => options.UseSqlServer(connectionString));
+        builder.Services.AddTransient<IUnitOfWork, UnitOfWork>();
+    }
+    
     public static void AddRegistrations(this IServiceCollection services)
     {
         RegisterFilters(services);
@@ -18,13 +40,6 @@ public static class CustomServicesStartup
         RegisterRepositories(services);
         RegisterServices(services);
         RegisterOthers(services);
-    }
-    
-    public static void RegisterDbContext(this WebApplicationBuilder builder)
-    {
-        var connectionString = builder.Configuration.GetConnectionString("DataBaseConnection");
-        builder.Services.AddDbContext<TasksDbContext>(options => options.UseSqlServer(connectionString));
-        builder.Services.AddTransient<IUnitOfWork, UnitOfWork>();
     }
 
     private static void RegisterFilters(IServiceCollection services)
@@ -34,8 +49,6 @@ public static class CustomServicesStartup
     
     private static void RegisterIdentity(IServiceCollection services)
     {
-        services.TryAddSingleton<IHttpContextAccessor, HttpContextAccessor>();
-
         services.AddIdentity<UserEntity, IdentityRole>(o =>
             {
                 o.Password.RequireDigit = true;
@@ -57,7 +70,7 @@ public static class CustomServicesStartup
 
     private static void RegisterServices(IServiceCollection services)
     {
-        services.AddSingleton<IHttpContextService, HttpContextService>();
+        services.AddScoped<IHttpContextService, HttpContextService>();
         services.AddTransient<IUserService, UserService>();
         services.AddTransient<ITaskListService, TaskListService>();
         services.AddTransient<ITaskService, TaskService>();

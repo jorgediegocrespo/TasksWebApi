@@ -7,10 +7,11 @@ namespace TasksWebApi.Startup;
 
 public static class AuditStartup
 {
-    public static void AuditSetupFilter(this MvcOptions mvcOptions, IConfiguration configuration)
+    public static void AuditSetupFilter(this MvcOptions mvcOptions, IServiceCollection services)
     {
-        var auditProviderType = configuration.GetValue<LogType>("Audit:Type");
-        if (auditProviderType == LogType.None)
+        var configurationValues = services.BuildServiceProvider().GetService<IConfigurationValuesService>();
+        var auditSettings = configurationValues.GetAuditSettings().Result;
+        if (auditSettings.Type == LogType.None)
             return;
         
         mvcOptions.AddAuditFilter(a => a
@@ -21,10 +22,11 @@ public static class AuditStartup
             .IncludeResponseBody());
     }
 
-    public static void UseAudit(this WebApplication app, IConfiguration configuration)
+    public static void UseAudit(this WebApplication app, IServiceCollection services)
     {
-        var auditProviderType = configuration.GetValue<LogType>("Audit:Type");
-        if (auditProviderType == LogType.None)
+        var configurationValues = services.BuildServiceProvider().GetService<IConfigurationValuesService>();
+        var auditSettings = configurationValues.GetAuditSettings().Result;
+        if (auditSettings.Type == LogType.None)
             return;
         
         app.Use(async (context, next) => {
@@ -39,13 +41,12 @@ public static class AuditStartup
             .IncludeResponseBody()
         );
         
-        app.AuditSetupOutput(configuration);
+        app.AuditSetupOutput(auditSettings);
     }
     
-    private static void AuditSetupOutput(this WebApplication app, IConfiguration configuration)
+    private static void AuditSetupOutput(this WebApplication app, AuditSettings auditSettings)
     {
-        var auditProviderType = configuration.GetValue<LogType>("Audit:Type");
-        switch (auditProviderType)
+        switch (auditSettings.Type)
         {
             case LogType.None:
                 break;
@@ -53,7 +54,7 @@ public static class AuditStartup
                 app.AuditSetupCustomOutput();
                 break;
             case LogType.AzureTableStorage:
-                app.AuditSetupAzureTableStorageOutput(configuration);
+                app.AuditSetupAzureTableStorageOutput(auditSettings);
                 break;
             default:
                 throw new ArgumentOutOfRangeException();
@@ -66,17 +67,14 @@ public static class AuditStartup
         Configuration.JsonSettings.WriteIndented = true;
     }
     
-    private static void AuditSetupAzureTableStorageOutput(this WebApplication app, IConfiguration configuration)
+    private static void AuditSetupAzureTableStorageOutput(this WebApplication app, AuditSettings auditSettings)
     {
-        var connectionString = configuration.GetValue<string>("Audit:ConnectionString");
-        var tableName = configuration.GetValue<string>("Audit:TableName");
-        
         Configuration.Setup()
             .UseAzureTableStorage(_ => _
-                .ConnectionString(connectionString)
-                .TableName(tableName)
+                .ConnectionString(auditSettings.ConnectionString)
+                .TableName(auditSettings.TableName)
                 .EntityBuilder(e => e
-                    .PartitionKey(ev => $"{tableName}{ev.GetWebApiAuditAction().UserName}{ev.StartDate:yyyyMM}")
+                    .PartitionKey(ev => $"{auditSettings.TableName}{ev.GetWebApiAuditAction().UserName}{ev.StartDate:yyyyMM}")
                     .RowKey(_ => Guid.NewGuid().ToString())
                     .Columns(c => c.FromObject(ev => new
                     {

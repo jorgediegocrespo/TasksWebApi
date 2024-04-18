@@ -1,11 +1,12 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
+using TasksWebApi.Services;
 
 namespace TasksWebApi.FilterAttributes;
 
 public class ApiKeyAttribute() : ServiceFilterAttribute(typeof(ApiKeyAuthorizationFilter));
 
-public class ApiKeyAuthorizationFilter(IConfiguration configuration) : IAuthorizationFilter
+public class ApiKeyAuthorizationFilter(IConfigurationValuesService configurationValuesService) : IAuthorizationFilter
 {
     private const string API_KEY_HEADER_NAME = "x-api-key";
 
@@ -24,7 +25,7 @@ public class ApiKeyAuthorizationFilter(IConfiguration configuration) : IAuthoriz
             return;
         }
         
-        var apiKey = configuration.GetValue<string>("XApiKey");
+        var apiKey = configurationValuesService.GetXApiKey().Result;
         if (apiKey is null)
         {
             context.Result = new UnauthorizedResult();

@@ -14,11 +14,19 @@ Some of the implementations carried out are:
 - Tests with MSTest
 
 # Getting Started
-1.	Install dotNet (the project is currently using dotNet 7)
-2.	Create a Microsoft SQL Server database
-3.	Fill the appsettings with your own configuracion
+1.	Install dotNet (the project is currently using dotNet 8)
+2.	Fill the appsettings with your own configuracion
+3.  Change DataBaseConnection in appsettings.Testing.json as it is used to generate the mock data base connection strings
+4.  Install Docker
 
 # Build and Test
-To build and run the main project (TasksWebApi) just build it and run with your own configuration.
+1.  Run the script TasksWebApi/tools/local-development/up.sh
+    -   It creates all the needed containers used in the application running the docker-compose.yaml file and executing different script to configure some containers:
+        -   MSSQL: Create the SQL Server that host the data base
+        -   REDIS: Create the REDIS cache server
+        -   VAULT: Create the vault server that contains the app secrets.
+            -   NOTE: As vault is running in dev mode, the keys are stored in memory, so they will be remove once the container is stopped.
 
-There is a test project. To run all test in it, ensure that the connection string (DataBaseConnection) in the testappsettings json is a valid one. It is going to be used to create a mock database while test runs.
+2.  Once all the containers have been created, you can run the applicacion and a swagger screen will be loaded with all the endpoints
+
+3.  There is a test project. To run all test in it, ensure that the connection string (DataBaseConnection) in the appsettings.Testing.json is a valid one. It is going to be used to create mock databases while test runs.

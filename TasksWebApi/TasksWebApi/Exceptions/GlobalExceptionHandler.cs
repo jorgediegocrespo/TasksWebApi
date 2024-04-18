@@ -4,7 +4,6 @@ using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.EntityFrameworkCore;
 using TasksWebApi.Constants;
 using TasksWebApi.Models;
-using TasksWebApi.Services;
 
 namespace TasksWebApi.Exceptions;
 

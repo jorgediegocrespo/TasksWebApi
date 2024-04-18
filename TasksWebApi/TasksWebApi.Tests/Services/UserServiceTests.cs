@@ -119,8 +119,9 @@ public class UserServiceTests
         IConfiguration configuration = new ConfigurationBuilder()
             .AddInMemoryCollection(inMemorySettings)
             .Build();
-
-        _userService = new UserService(_userManagerMock.Object, _signInManagerMock.Object, configuration, _httpContextServiceMock.Object, _taskListRepositoryMock.Object, _unitOfWorkMock.Object, _loggerUserServiceMock.Object);
+        
+        var appSettingsConfigurationValuesService = new AppSettingsConfigurationValuesService(configuration);
+        _userService = new UserService(_userManagerMock.Object, _signInManagerMock.Object, appSettingsConfigurationValuesService, _httpContextServiceMock.Object, _taskListRepositoryMock.Object, _unitOfWorkMock.Object, _loggerUserServiceMock.Object);
         return Task.CompletedTask;
     }
     

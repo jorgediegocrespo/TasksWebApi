@@ -9,7 +9,7 @@ namespace TasksWebApi.DataAccess;
 public class TasksDbContext : IdentityDbContext<UserEntity>
 {
     private readonly IHttpContextService _httpContextService;
-    public TasksDbContext(IHttpContextService httpContextService, DbContextOptions options) : base(options)
+    public TasksDbContext(IHttpContextService httpContextService, DbContextOptions<TasksDbContext> options) : base(options)
     {
         _httpContextService = httpContextService;
     }

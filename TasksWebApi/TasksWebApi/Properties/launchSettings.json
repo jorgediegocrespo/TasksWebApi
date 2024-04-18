@@ -16,7 +16,8 @@
       "launchUrl": "swagger",
       "applicationUrl": "https://localhost:7069;http://localhost:5019",
       "environmentVariables": {
-        "ASPNETCORE_ENVIRONMENT": "Development"
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "VAULT-TOKEN": "26cbb583-b78a-41f4-8678-1926a92e47a6"
       }
     },
     "IIS Express": {

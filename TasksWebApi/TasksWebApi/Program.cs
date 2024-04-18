@@ -4,18 +4,22 @@ using TasksWebApi.Startup;
 
 var builder = WebApplication.CreateBuilder(args);
 
+builder.Services.RegisterConfigurationValuesService(builder.Configuration);
 builder.SetupSerilog();
 
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 builder.Services.AddProblemDetails();
 builder.Services.AddRateLimiter();
+builder.Services.AddCache(builder.Configuration);
 
 builder.RegisterDbContext();
+builder.Services.AddHttpContextAccessor();
 builder.Services.AddRegistrations();
 
-builder.Services.AddControllers(x => x.AuditSetupFilter(builder.Configuration));
-builder.Services.AddJwtAuthentication(builder.Configuration);
+builder.Services.AddControllers(x => x.AuditSetupFilter(builder.Services));
+builder.Services.AddJwtAuthentication();
 builder.Services.AddVersioning();
+builder.Services.AddCustomHealthChecks(builder.Configuration);
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.ConfigureSwaggerOptions();
@@ -36,7 +40,8 @@ app.UseAuthentication();
 app.UseAuthorization();
 app.AddMiddlewares();
 app.MapControllers();
-app.UseAudit(builder.Configuration);
+app.MapCustomHealthChecks();
+app.UseAudit(builder.Services);
 app.UseExceptionHandler();
 app.UseRateLimiter();
 

@@ -411,3 +411,8 @@ TasksWebApi/TasksWebApi.Tests/.DS_Store
 TasksWebApi/.DS_Store
 .DS_Store
 TasksWebApi/.idea
+
+# Docker volumes
+TasksWebApi/tools/mssql/data
+TasksWebApi/tools/redis/data
+TasksWebApi/tools/vault/data

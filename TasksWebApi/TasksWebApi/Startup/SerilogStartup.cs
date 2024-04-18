@@ -8,8 +8,9 @@ public static class SerilogStartup
 {
     public static void SetupSerilog(this WebApplicationBuilder builder)
     {
-        var auditProviderType = builder.Configuration.GetValue<LogType>("SerilogLog:Type");
-        if (auditProviderType == LogType.None)
+        var configurationValues = builder.Services.BuildServiceProvider().GetService<IConfigurationValuesService>();
+        var serilogSettings = configurationValues.GetSerilogSettings().Result;
+        if (serilogSettings.Type == LogType.None)
             return;
         
         Log.Logger = new LoggerConfiguration()
@@ -17,16 +18,17 @@ public static class SerilogStartup
             .Enrich.FromLogContext()
             .WriteTo.Console(outputTemplate: "{Timestamp:HH:mm:ss.fff} [{Level:u1}] {Message:lj}{NewLine}{Exception}")
             .WriteTo.AzureTableStorage(
-                builder.Configuration["SerilogLog:ConnectionString"], 
-                storageTableName: builder.Configuration["SerilogLog:TableName"],
+                serilogSettings.ConnectionString, 
+                storageTableName: serilogSettings.TableName,
                 propertyColumns: new[] { "SourceContext", "RequestId", "RequestPath", "ConnectionId" })
             .CreateLogger();
     }
     
     public static void UseSerilog(this WebApplicationBuilder builder)
     {
-        var auditProviderType = builder.Configuration.GetValue<LogType>("SerilogLog:Type");
-        if (auditProviderType == LogType.None)
+        var configurationValues = builder.Services.BuildServiceProvider().GetService<IConfigurationValuesService>();
+        var serilogSettings = configurationValues.GetSerilogSettings().Result;
+        if (serilogSettings.Type == LogType.None)
             return;
         
         builder.Host.UseSerilog();

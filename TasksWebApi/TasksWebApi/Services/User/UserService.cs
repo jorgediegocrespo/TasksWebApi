@@ -17,7 +17,7 @@ namespace TasksWebApi.Services;
 public class UserService(
     UserManager<UserEntity> userManager,
     SignInManager<UserEntity> signInManager,
-    IConfiguration configuration,
+    IConfigurationValuesService configurationValuesService,
     IHttpContextService httpContextService,
     ITaskListRepository taskListRepository,
     IUnitOfWork unitOfWork,
@@ -141,29 +141,26 @@ public class UserService(
 
     private async Task<TokenResponse> GetTokenInfoAsync(string userName)
     {
-        var expirationMinutes = int.Parse(configuration["Jwt:ExpireMinutes"]!);
+        var jwtSettings = await configurationValuesService.GetJwtSettings();
+        var expirationMinutes = jwtSettings.ExpireMinutes;
         var expiration = DateTime.UtcNow.AddMinutes(expirationMinutes);
         
-        var token = await GenerateTokenAsync(userName, expiration);
-        var user = await GenerateRefreshTokenAsync(userName);
+        var token = await GenerateTokenAsync(jwtSettings, userName, expiration);
+        var user = await GenerateRefreshTokenAsync(jwtSettings, userName);
         
         var tokenInfo = new TokenResponse(token, user.RefreshToken);
         return tokenInfo;
     }
     
-    private async Task<string> GenerateTokenAsync(string userName, DateTime expiration)
-    {
-        var issuer = configuration["Jwt:Issuer"];
-        var audience = configuration["Jwt:Audience"];
-        var key = configuration["Jwt:Key"];
-        ;
-        var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(key!));
+    private async Task<string> GenerateTokenAsync(JwtSettings jwtSettings, string userName, DateTime expiration)
+    { ;
+        var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings.Key));
         var credentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);
         var claims = await GetUserClaimsAsync(userName);
         
         var securityToken = new JwtSecurityToken(
-            issuer: issuer, 
-            audience: audience, 
+            issuer: jwtSettings.Issuer, 
+            audience: jwtSettings.Audience, 
             claims: claims, 
             expires: expiration, 
             signingCredentials: credentials);
@@ -171,18 +168,16 @@ public class UserService(
         return new JwtSecurityTokenHandler().WriteToken(securityToken);
     }
     
-    private async Task<UserEntity> GenerateRefreshTokenAsync(string userName, CancellationToken cancellationToken = default)
+    private async Task<UserEntity> GenerateRefreshTokenAsync(JwtSettings jwtSettings, string userName, CancellationToken cancellationToken = default)
     {
-        var refreshTokenExpireMinutes = int.Parse(configuration["Jwt:RefreshTokenExpireMinutes"]!);
-        
         var randomNumber = new byte[32];
         using var rng = RandomNumberGenerator.Create();
         rng.GetBytes(randomNumber);
         var refreshToken = Convert.ToBase64String(randomNumber);
         
         var user = await userManager.FindByNameAsync(userName);
-        user.RefreshToken = refreshToken;
-        user.RefreshTokenExpiration = DateTime.UtcNow.AddMinutes(refreshTokenExpireMinutes);
+        user!.RefreshToken = refreshToken;
+        user!.RefreshTokenExpiration = DateTime.UtcNow.AddMinutes(jwtSettings.RefreshTokenExpireMinutes);
         
         var result = await userManager.UpdateAsync(user);
         if (result.Succeeded) 

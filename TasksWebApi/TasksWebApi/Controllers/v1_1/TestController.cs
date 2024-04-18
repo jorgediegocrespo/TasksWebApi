@@ -1,16 +1,36 @@
 using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using TasksWebApi.Services;
 
 namespace TasksWebApi.Controllers.V1_1;
 
 [AllowAnonymous]
 [ApiVersion("1.1")]
-public class TestController : BaseController
+public class TestController(ICache cache) : BaseController
 {
     [HttpGet]
-    public IActionResult Test(CancellationToken cancellationToken = default)
+    public async Task<IActionResult> Test(CancellationToken cancellationToken = default)
     {
-        return Ok("v1.1");
+        int value = await cache.GetAsync("value", 0, cancellationToken);
+        value++;
+        await cache.SetAsync("value", value, DateTime.UtcNow.AddMinutes(20), cancellationToken);
+        return Ok(value);
+    }
+    
+    [HttpGet]
+    [Route("test2")]
+    public async Task<IActionResult> Test2(CancellationToken cancellationToken = default)
+    {
+        int value = await cache.GetAsync("value", 0, cancellationToken);
+        return Ok(value);
+    }
+    
+    [HttpGet]
+    [Route("test3")]
+    public async Task<IActionResult> Test3(CancellationToken cancellationToken = default)
+    {
+        await cache.RemoveAsync("value", cancellationToken);
+        return Ok("ok");
     }
 }
