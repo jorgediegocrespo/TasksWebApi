@@ -12,6 +12,7 @@ namespace TasksWebApi.Services;
 public class TaskListService(
     IUnitOfWork unitOfWork,
     ITaskListRepository repository,
+    ICacheService cacheService,
     IHttpContextService httpContextService,
     ILogger<TaskListService> loggerManager)
     : BaseService(unitOfWork), ITaskListService
@@ -19,9 +20,17 @@ public class TaskListService(
     public async Task<PaginationResponse<ReadTaskListResponse>> GetAllAsync(PaginationRequest request, CancellationToken cancellationToken = default)
     {
         var userId = httpContextService.GetContextUser().Id;
+        var cacheKey = $"{userId}_TaskList_{request.PageNumber}_{request.PageSize}";
+        var cachedData = await cacheService.GetAsync<PaginationResponse<ReadTaskListResponse>>(cacheKey, null, cancellationToken);
+        if (cachedData != null)
+            return cachedData;
+        
         var allEntities = await repository.GetAllAsync(userId, request.PageSize, request.PageNumber, cancellationToken);
         var count = await repository.GetTotalRecordsAsync(userId, cancellationToken);
-        return new PaginationResponse<ReadTaskListResponse>(count, allEntities.Select(x => x.ToReadingTaskList()));
+        var result = new PaginationResponse<ReadTaskListResponse>(count, allEntities.Select(x => x.ToReadingTaskList()));
+        await cacheService.SetWithDefaultExpirationAsync(cacheKey, result, cancellationToken);
+
+        return result;
     }
 
     public async Task<ReadTaskListResponse> GetAsync(int id, CancellationToken cancellationToken = default)

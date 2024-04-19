@@ -7,14 +7,14 @@ namespace TasksWebApi.Controllers.V1_1;
 
 [AllowAnonymous]
 [ApiVersion("1.1")]
-public class TestController(ICache cache) : BaseController
+public class TestController(ICacheService cacheService) : BaseController
 {
     [HttpGet]
     public async Task<IActionResult> Test(CancellationToken cancellationToken = default)
     {
-        int value = await cache.GetAsync("value", 0, cancellationToken);
+        int value = await cacheService.GetAsync("value", 0, cancellationToken);
         value++;
-        await cache.SetAsync("value", value, DateTime.UtcNow.AddMinutes(20), cancellationToken);
+        await cacheService.SetAsync("value", value, DateTime.UtcNow.AddMinutes(20), cancellationToken);
         return Ok(value);
     }
     
@@ -22,7 +22,7 @@ public class TestController(ICache cache) : BaseController
     [Route("test2")]
     public async Task<IActionResult> Test2(CancellationToken cancellationToken = default)
     {
-        int value = await cache.GetAsync("value", 0, cancellationToken);
+        int value = await cacheService.GetAsync("value", 0, cancellationToken);
         return Ok(value);
     }
     
@@ -30,7 +30,7 @@ public class TestController(ICache cache) : BaseController
     [Route("test3")]
     public async Task<IActionResult> Test3(CancellationToken cancellationToken = default)
     {
-        await cache.RemoveAsync("value", cancellationToken);
+        await cacheService.RemoveAsync("value", cancellationToken);
         return Ok("ok");
     }
 }

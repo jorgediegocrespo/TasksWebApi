@@ -12,22 +12,27 @@ public static class HealthChecksStartup
     {
         var configurationValues = services.BuildServiceProvider().GetService<IConfigurationValuesService>();
         
-        var sqlServerConnectionString = configurationValues.GetDataBaseConnection().Result;
-        var redisConnectionString = configuration.GetValue<string>("RedisCache:Url");
+        var sqlServerConnectionString = configurationValues.GetDataBaseConnectionAsync().Result;
+        var redisConnectionString = configuration.GetValue<string>("RedisCache:ConnectionString");
         
-        var serilogSettings = configurationValues.GetSerilogSettings().Result;
+        var serilogSettings = configurationValues.GetSerilogSettingsAsync().Result;
         var serilogProviderType = serilogSettings.Type;
         var serilogAzureTableStorageConnectionString = serilogSettings.ConnectionString;
         var serilogAzureTableName = serilogSettings.TableName;
         
-        var auditSettings = configurationValues.GetAuditSettings().Result;
+        var auditSettings = configurationValues.GetAuditSettingsAsync().Result;
         var auditProviderType = auditSettings.Type;
         var auditAzureTableStorageConnectionString = auditSettings.ConnectionString;
         var auditAzureTableName = auditSettings.TableName;
-        
+
         var healthChecksBuilder = services.AddHealthChecks()
-            .AddSqlServer(sqlServerConnectionString!)
-            .AddRedis(redisConnectionString!);
+            .AddSqlServer(sqlServerConnectionString!);
+
+        if (!string.IsNullOrWhiteSpace(redisConnectionString))
+        {
+            healthChecksBuilder = healthChecksBuilder
+                .AddRedis(redisConnectionString);
+        }
 
         if (serilogProviderType == LogType.AzureTableStorage)
         {

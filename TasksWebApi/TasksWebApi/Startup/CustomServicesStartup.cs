@@ -28,7 +28,7 @@ public static class CustomServicesStartup
     public static void RegisterDbContext(this WebApplicationBuilder builder)
     {
         var configurationValues = builder.Services.BuildServiceProvider().GetService<IConfigurationValuesService>();
-        var connectionString = configurationValues.GetDataBaseConnection().Result;
+        var connectionString = configurationValues.GetDataBaseConnectionAsync().Result;
         builder.Services.AddDbContext<TasksDbContext>(options => options.UseSqlServer(connectionString));
         builder.Services.AddTransient<IUnitOfWork, UnitOfWork>();
     }

@@ -20,7 +20,7 @@ public static class JwtAuthStartup
 
     private static TokenValidationParameters GetTokenValidationParameters(IConfigurationValuesService configurationValues)
     {
-        var jwtSettings = configurationValues.GetJwtSettings().Result;
+        var jwtSettings = configurationValues.GetJwtSettingsAsync().Result;
         return new TokenValidationParameters
         {
             ValidIssuer = jwtSettings.Issuer,

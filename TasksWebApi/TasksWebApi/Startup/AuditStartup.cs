@@ -10,7 +10,7 @@ public static class AuditStartup
     public static void AuditSetupFilter(this MvcOptions mvcOptions, IServiceCollection services)
     {
         var configurationValues = services.BuildServiceProvider().GetService<IConfigurationValuesService>();
-        var auditSettings = configurationValues.GetAuditSettings().Result;
+        var auditSettings = configurationValues.GetAuditSettingsAsync().Result;
         if (auditSettings.Type == LogType.None)
             return;
         
@@ -25,7 +25,7 @@ public static class AuditStartup
     public static void UseAudit(this WebApplication app, IServiceCollection services)
     {
         var configurationValues = services.BuildServiceProvider().GetService<IConfigurationValuesService>();
-        var auditSettings = configurationValues.GetAuditSettings().Result;
+        var auditSettings = configurationValues.GetAuditSettingsAsync().Result;
         if (auditSettings.Type == LogType.None)
             return;
         

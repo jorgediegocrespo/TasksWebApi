@@ -25,7 +25,7 @@ public class ApiKeyAuthorizationFilter(IConfigurationValuesService configuration
             return;
         }
         
-        var apiKey = configurationValuesService.GetXApiKey().Result;
+        var apiKey = configurationValuesService.GetXApiKeyAsync().Result;
         if (apiKey is null)
         {
             context.Result = new UnauthorizedResult();

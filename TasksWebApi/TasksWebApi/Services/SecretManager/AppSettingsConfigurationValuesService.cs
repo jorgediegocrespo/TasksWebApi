@@ -2,19 +2,19 @@ namespace TasksWebApi.Services;
 
 public class AppSettingsConfigurationValuesService(IConfiguration configuration) : IConfigurationValuesService
 {
-    public Task<string> GetDataBaseConnection()
+    public Task<string> GetDataBaseConnectionAsync(CancellationToken cancellationToken = default)
     {
         var connectionString = configuration.GetConnectionString("DataBaseConnection");
         return Task.FromResult(connectionString);
     }
 
-    public Task<string> GetXApiKey()
+    public Task<string> GetXApiKeyAsync(CancellationToken cancellationToken = default)
     {
         var connectionString = configuration.GetValue<string>("XApiKey");
         return Task.FromResult(connectionString);
     }
 
-    public Task<JwtSettings> GetJwtSettings()
+    public Task<JwtSettings> GetJwtSettingsAsync(CancellationToken cancellationToken = default)
     {
         return Task.FromResult(new JwtSettings(
             configuration.GetValue<string>("Jwt:Issuer"),
@@ -25,7 +25,7 @@ public class AppSettingsConfigurationValuesService(IConfiguration configuration)
         ));
     }
 
-    public Task<AuditSettings> GetAuditSettings()
+    public Task<AuditSettings> GetAuditSettingsAsync(CancellationToken cancellationToken = default)
     {
         return Task.FromResult(new AuditSettings(
             configuration.GetValue<LogType>("Audit:Type"),
@@ -34,12 +34,20 @@ public class AppSettingsConfigurationValuesService(IConfiguration configuration)
         ));
     }
 
-    public Task<SerilogSettings> GetSerilogSettings()
+    public Task<SerilogSettings> GetSerilogSettingsAsync(CancellationToken cancellationToken = default)
     {
         return Task.FromResult(new SerilogSettings(
             configuration.GetValue<LogType>("SerilogLog:Type"),
             configuration.GetValue<string>("SerilogLog:ConnectionString"),
             configuration.GetValue<string>("SerilogLog:TableName")
+        ));
+    }
+    
+    public Task<RedisSettings> GetRedisSettingsAsync(CancellationToken cancellationToken = default)
+    {
+        return Task.FromResult(new RedisSettings(
+            configuration.GetValue<string>("RedisCache:ConnectionString"),
+            configuration.GetValue<string>("RedisCache:InstanceName")
         ));
     }
 }

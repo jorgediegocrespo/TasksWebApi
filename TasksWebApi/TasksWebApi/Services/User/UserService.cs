@@ -141,7 +141,7 @@ public class UserService(
 
     private async Task<TokenResponse> GetTokenInfoAsync(string userName)
     {
-        var jwtSettings = await configurationValuesService.GetJwtSettings();
+        var jwtSettings = await configurationValuesService.GetJwtSettingsAsync();
         var expirationMinutes = jwtSettings.ExpireMinutes;
         var expiration = DateTime.UtcNow.AddMinutes(expirationMinutes);
         

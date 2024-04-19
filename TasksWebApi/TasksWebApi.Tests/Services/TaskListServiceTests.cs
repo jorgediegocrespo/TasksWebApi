@@ -7,6 +7,7 @@ using TasksWebApi.DataAccess;
 using TasksWebApi.DataAccess.Entities;
 using TasksWebApi.DataAccess.Repositories;
 using TasksWebApi.Exceptions;
+using TasksWebApi.Mappers;
 using TasksWebApi.Models;
 using TasksWebApi.Services;
 
@@ -16,6 +17,7 @@ namespace TasksWebApi.Tests.Services;
 public class TaskListServiceTests
 {
     private readonly Mock<IUnitOfWork> _unitOfWorkMock = new();
+    private readonly Mock<ICacheService> _cacheServiceMock = new();
     private readonly Mock<ITaskListRepository> _taskListRepositoryMock = new();
     private readonly Mock<IHttpContextService> _httpContextServiceMock = new();
     private readonly Mock<ILogger<TaskListService>> _loggerTaskListServiceMock = new();
@@ -71,6 +73,26 @@ public class TaskListServiceTests
                     throw new DbUpdateConcurrencyException();
             });
         
+        _cacheServiceMock
+            .Setup(x => x.GetAsync<PaginationResponse<ReadTaskListResponse>>(It.IsAny<string>(), It.IsAny<PaginationResponse<ReadTaskListResponse>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((string key, PaginationResponse<ReadTaskListResponse> defaultValue, CancellationToken cancellationToken) =>
+            {
+                if (!key.EndsWith("_TaskList_2_2"))
+                    return null;
+                
+                return new PaginationResponse<ReadTaskListResponse>(
+                    7, 
+                    new List<ReadTaskListResponse>()
+                    {
+                        GivenTaskList(3).ToReadingTaskList(), 
+                        GivenTaskList(4).ToReadingTaskList()
+                    });
+            });
+        
+        _cacheServiceMock
+            .Setup(x => x.SetWithDefaultExpirationAsync(It.IsAny<string>(), It.IsAny<PaginationResponse<ReadTaskListResponse>>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+        
         _unitOfWorkMock
             .Setup(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(1);
@@ -79,11 +101,12 @@ public class TaskListServiceTests
             .Setup(x => x.GetContextUser())
             .Returns(new UserResponse(Guid.NewGuid().ToString(), "user1", "user1@dicres.com", new List<string>()));
         
-        _taskListService = new TaskListService(_unitOfWorkMock.Object, _taskListRepositoryMock.Object, _httpContextServiceMock.Object, _loggerTaskListServiceMock.Object);
+        _taskListService = new TaskListService(_unitOfWorkMock.Object, _taskListRepositoryMock.Object, _cacheServiceMock.Object, _httpContextServiceMock.Object, _loggerTaskListServiceMock.Object);
         return Task.CompletedTask;
     }
 
     [TestMethod]
+    [DataRow(2, 2, 2)]
     [DataRow(2, 1, 2)]
     [DataRow(2, 4, 1)]
     [DataRow(2, 5, 0)]

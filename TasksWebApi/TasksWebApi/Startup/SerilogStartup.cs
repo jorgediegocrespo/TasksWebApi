@@ -9,7 +9,7 @@ public static class SerilogStartup
     public static void SetupSerilog(this WebApplicationBuilder builder)
     {
         var configurationValues = builder.Services.BuildServiceProvider().GetService<IConfigurationValuesService>();
-        var serilogSettings = configurationValues.GetSerilogSettings().Result;
+        var serilogSettings = configurationValues.GetSerilogSettingsAsync().Result;
         if (serilogSettings.Type == LogType.None)
             return;
         
@@ -27,7 +27,7 @@ public static class SerilogStartup
     public static void UseSerilog(this WebApplicationBuilder builder)
     {
         var configurationValues = builder.Services.BuildServiceProvider().GetService<IConfigurationValuesService>();
-        var serilogSettings = configurationValues.GetSerilogSettings().Result;
+        var serilogSettings = configurationValues.GetSerilogSettingsAsync().Result;
         if (serilogSettings.Type == LogType.None)
             return;
         

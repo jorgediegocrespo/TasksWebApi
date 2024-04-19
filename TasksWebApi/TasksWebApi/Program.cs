@@ -10,7 +10,7 @@ builder.SetupSerilog();
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 builder.Services.AddProblemDetails();
 builder.Services.AddRateLimiter();
-builder.Services.AddCache(builder.Configuration);
+builder.Services.AddCache();
 
 builder.RegisterDbContext();
 builder.Services.AddHttpContextAccessor();

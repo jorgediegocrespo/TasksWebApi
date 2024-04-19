@@ -1,6 +1,6 @@
 namespace TasksWebApi.Services;
 
-public interface ICache
+public interface ICacheService
 {
     Task<T> GetAsync<T>(string key, T defaultValue = default(T), CancellationToken cancellationToken = default);
     Task SetWithDefaultExpirationAsync<T>(string key, T value, CancellationToken cancellationToken = default);

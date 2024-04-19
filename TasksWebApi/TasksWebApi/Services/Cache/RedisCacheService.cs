@@ -3,7 +3,7 @@ using Microsoft.Extensions.Caching.Distributed;
 
 namespace TasksWebApi.Services;
 
-public class RedisCacheService(IDistributedCache cache, IConfiguration configuration) : ICache
+public class RedisCacheService(IDistributedCache cache, IConfiguration configuration) : ICacheService
 {
     private readonly TimeSpan defaultAbsoluteExpiration = TimeSpan.Parse(configuration["RedisCache:DefaultAbsoluteExpiration"]!);
     private readonly TimeSpan defaultSlidingExpiration = TimeSpan.Parse(configuration["RedisCache:DefaultSlidingExpiration"]!);
