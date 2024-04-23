@@ -416,3 +416,6 @@ TasksWebApi/.idea
 TasksWebApi/tools/mssql/data
 TasksWebApi/tools/redis/data
 TasksWebApi/tools/vault/data
+TasksWebApi/docker-tools/grafana/data
+TasksWebApi/docker-tools/mssql/data
+TasksWebApi/docker-tools/prometheus/data

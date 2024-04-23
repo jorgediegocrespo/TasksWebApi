@@ -1,0 +1,132 @@
+version: '3.9'
+name: tasks-dev
+services:
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: sqlserver
+    environment:
+      - ACCEPT_EULA=Y
+      - SA_PASSWORD=Sql_S3rv3r
+    ports:
+      - "1433:1433"
+    volumes:
+      - ./mssql/data:/var/opt/mssql
+    restart: always
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P Sql_S3rv3r -Q 'SELECT 1' || exit 1"]
+      interval: 10s
+      retries: 10
+      start_period: 10s
+      timeout: 3s
+    networks:
+      - tasks-dev-network
+      
+  sqlserver.configurator:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: sqlserver-configurator
+    volumes:
+      - ./mssql/init:/docker-entrypoint-initdb.d
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+    restart: no
+    command: >
+      bash -c '
+      /opt/mssql-tools/bin/sqlcmd -S sqlserver -U sa -P Sql_S3rv3r -d master -i docker-entrypoint-initdb.d/init.sql;
+      echo "All done!"
+      '
+    networks:
+      - tasks-dev-network
+      
+  redis:
+    image: redis:6.2-alpine
+    container_name: redis
+    restart: always
+    ports:
+      - "6379:6379"
+    volumes:
+      - ./redis/data:/data
+    networks:
+      - tasks-dev-network
+    
+  vault:
+    image: vault:1.13.3
+    container_name: vault
+    restart: always
+    ports:
+      - "8200:8200"
+    environment:
+      VAULT_ADDR: "http://127.0.0.1:8200"
+      # in production scenarios the token mechanisim for loggin will be forbidden,
+      # it cannot be in source control.
+      VAULT_TOKEN: '26cbb583-b78a-41f4-8678-1926a92e47a6'
+      VAULT_DEV_ROOT_TOKEN_ID: '26cbb583-b78a-41f4-8678-1926a92e47a6'
+    volumes:
+      - ./vault/data:/vault/file
+    cap_add:
+      - IPC_LOCK
+    networks:
+      - tasks-dev-network
+      
+  loki:
+    image: grafana/loki:latest
+    container_name: loki
+    ports:
+      - "3100:3100"
+    command: -config.file=/etc/loki/local-config.yaml
+    networks:
+      - tasks-dev-network
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    ports:
+      - "9090:9090"
+    command: --config.file=/etc/prometheus/prometheus.yaml --storage.tsdb.path=/prometheus
+    volumes:
+      - ./prometheus.yaml:/etc/prometheus/prometheus.yaml
+      - ./prometheus/data:/prometheus
+    networks:
+      - tasks-dev-network
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
+      - GF_AUTH_DISABLE_LOGIN_FORM=true
+    volumes:
+      - ./grafana/data/:/var/lib/grafana/
+      - ./grafana-datasources.yaml:/etc/grafana/provisioning/datasources/ds.yaml
+    depends_on:
+      - prometheus
+      - loki
+    networks:
+      - tasks-dev-network
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:latest
+    container_name: otel-collector
+    ports:
+      - "4317:4317"
+      - "4318:4318"
+    command: --config=/etc/otel-collector-config.yaml
+    volumes:
+      - ./otel-collector-config.yaml:/etc/otel-collector-config.yaml
+    networks:
+      - tasks-dev-network
+
+  zipkin:
+    image: openzipkin/zipkin:latest
+    container_name: zipkin
+    ports:
+      - "9411:9411"
+    networks:
+      - tasks-dev-network
+        
+networks:
+  tasks-dev-network:
+    name: tasks-dev-network

@@ -1,0 +1,10 @@
+# we are telling prometheus where it will get the metrics from and how often you should ask for them.
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+
+  - job_name: 'otelcollector'
+    static_configs:
+      - targets: [ 'otel-collector:8889' ]

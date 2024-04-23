@@ -1,36 +1,38 @@
 using Serilog;
 using Serilog.Events;
+using Serilog.Sinks.OpenTelemetry;
 using TasksWebApi.Services;
 
 namespace TasksWebApi.Startup;
 
 public static class SerilogStartup
 {
-    public static void SetupSerilog(this WebApplicationBuilder builder)
+    public static void SetupOpenTelemetrySerilog(this WebApplicationBuilder builder, IWebHostEnvironment currentEnvironment)
     {
-        var configurationValues = builder.Services.BuildServiceProvider().GetService<IConfigurationValuesService>();
-        var serilogSettings = configurationValues.GetSerilogSettingsAsync().Result;
-        if (serilogSettings.Type == LogType.None)
-            return;
-        
+        const string outputTemplate =
+            "[{Level:w}]: {Timestamp:dd-MM-yyyy:HH:mm:ss} {MachineName} {EnvironmentName} {SourceContext} {Message}{NewLine}{Exception}";
+
         Log.Logger = new LoggerConfiguration()
-            .MinimumLevel.Override("Microsoft", LogEventLevel.Warning)
+            .MinimumLevel.Information()
             .Enrich.FromLogContext()
-            .WriteTo.Console(outputTemplate: "{Timestamp:HH:mm:ss.fff} [{Level:u1}] {Message:lj}{NewLine}{Exception}")
-            .WriteTo.AzureTableStorage(
-                serilogSettings.ConnectionString, 
-                storageTableName: serilogSettings.TableName,
-                propertyColumns: new[] { "SourceContext", "RequestId", "RequestPath", "ConnectionId" })
+            .Enrich.WithThreadId()
+            .Enrich.WithEnvironmentName()
+            .Enrich.WithMachineName()
+            .WriteTo.Console(outputTemplate: outputTemplate)
+            .WriteTo.OpenTelemetry(opts =>
+            {
+                opts.ResourceAttributes = new Dictionary<string, object>
+                {
+                    ["app"] = currentEnvironment.ApplicationName,
+                    ["runtime"] = "dotnet",
+                    ["service.name"] = currentEnvironment.ApplicationName
+                };
+            })
             .CreateLogger();
     }
     
-    public static void UseSerilog(this WebApplicationBuilder builder)
+    public static void UseOpenTelemetrySerilog(this WebApplicationBuilder builder)
     {
-        var configurationValues = builder.Services.BuildServiceProvider().GetService<IConfigurationValuesService>();
-        var serilogSettings = configurationValues.GetSerilogSettingsAsync().Result;
-        if (serilogSettings.Type == LogType.None)
-            return;
-        
         builder.Host.UseSerilog();
     }
 }

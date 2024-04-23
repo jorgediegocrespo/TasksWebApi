@@ -13,7 +13,9 @@ public static class HealthChecksStartup
         var configurationValues = services.BuildServiceProvider().GetService<IConfigurationValuesService>();
         
         var sqlServerConnectionString = configurationValues.GetDataBaseConnectionAsync().Result;
-        var redisConnectionString = configuration.GetValue<string>("RedisCache:ConnectionString");
+        
+        var redisSettings = configurationValues.GetRedisSettingsAsync().Result;
+        var redisConnectionString = redisSettings.ConnectionString;
         
         var serilogSettings = configurationValues.GetSerilogSettingsAsync().Result;
         var serilogProviderType = serilogSettings.Type;
