@@ -41,19 +41,19 @@
         <PackageReference Include="Swashbuckle.AspNetCore" Version="6.5.0" />
         <PackageReference Include="VaultSharp" Version="1.13.0.1" />
 
-        <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.5.0" />
-        <PackageReference Include="OpenTelemetry.Extensions.Hosting" Version="1.5.0" />
-        <PackageReference Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.0.0" />
+        <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.8.1" />
+        <PackageReference Include="OpenTelemetry.Extensions.Hosting" Version="1.8.1" />
+        <PackageReference Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.8.1" />
         <PackageReference Include="OpenTelemetry.Instrumentation.EventCounters" Version="1.0.0-alpha.2" />
-        <PackageReference Include="OpenTelemetry.Instrumentation.Runtime" Version="1.1.0" />
-        <PackageReference Include="OpenTelemetry.Instrumentation.Http" Version="1.0.0" />
+        <PackageReference Include="OpenTelemetry.Instrumentation.Runtime" Version="1.8.0" />
+        <PackageReference Include="OpenTelemetry.Instrumentation.Http" Version="1.8.1" />
         <PackageReference Include="OpenTelemetry.Instrumentation.Process" Version="0.5.0-beta.2" />
 
-        <PackageReference Include="Serilog.AspNetCore" Version="7.0.0" />
+        <PackageReference Include="Serilog.AspNetCore" Version="8.0.1" />
         <PackageReference Include="Serilog.Enrichers.Thread" Version="3.1.0" />
-        <PackageReference Include="Serilog.Sinks.Console" Version="4.1.0" />
-        <PackageReference Include="Serilog.Enrichers.Environment" Version="2.2.0" />
-        <PackageReference Include="Serilog.Sinks.OpenTelemetry" Version="1.0.0-dev-00208" />
+        <PackageReference Include="Serilog.Sinks.Console" Version="5.0.1" />
+        <PackageReference Include="Serilog.Enrichers.Environment" Version="2.3.0" />
+        <PackageReference Include="Serilog.Sinks.OpenTelemetry" Version="1.2.0" />
     </ItemGroup>
 
     <ItemGroup>
